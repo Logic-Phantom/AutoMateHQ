@@ -103,7 +103,11 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] 대시보드 로그인 → 카카오 로그인 연결 → 테스트 메시지 발송 성공(2026-11-15 17:49 KST, 카카오 응답 `200 / result_code 0`)
 - [ ] 다음 날 07:00~ 정기 보고서 실제 수신 확인
 - [x] GitHub Fine-grained PAT 발급(“AI Automation HQ”, 저장소 8개, Actions 읽기·쓰기 + Metadata 읽기, 2027-02-13 만료) 후 연동 설정에 저장 — Logic-Phantom으로 연결됨
-- [x] 프로젝트 7개 등록(`scripts/seed-presets.mjs` → D1, 대시보드 “기존 저장소에서 추가”와 같은 값)
+- [x] 프로젝트 등록(`scripts/seed-presets.mjs` → D1, 대시보드 “기존 저장소에서 추가”와 같은 값): StrangeRecords·FactBokAI·CHIPLY·청약·고정비·TechLog·GitHub 프로필·기술 블로그(Pages)·DevVibe. 점심합의는 감시 제외(이력 보관)
+- [x] GitHub 토큰 저장소 범위 갱신(점심합의 제외, Logic-Phantom·Logic-Phantom.github.io·DevVibe 추가 → 10개)
+- [x] Claude Code Routine “AI Automation HQ 읽기 전용 점검” 생성(API 트리거, 감시 저장소 10개)
+- [ ] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit) — 토큰은 생성 시 1회만 표시
+- [ ] DevVibe: 매일 09:00 루틴이 HQ에 Heartbeat를 보내도록 연결(HQ에서 Heartbeat 키 발급 → 루틴 지침에 보고 단계 추가). 연결 전까지 ‘확인 불가’
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
 
@@ -121,3 +125,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 카카오 REST API 키·클라이언트 시크릿 Cloudflare Secret 등록
 - KOE101 해결: PowerShell 파이프로 등록한 secret 끝의 CRLF 제거(재등록 + 코드에서 trim) → 카카오 연결·테스트 메시지 성공
 - 크롬에서 GitHub Fine-grained 토큰 생성(최소 저장소·권한), HQ 연결 확인, 기존 자동화 프로젝트 7개 등록
+- 점심합의 감시 제외, GitHub 프로필·기술 블로그·DevVibe 추가(DevVibe는 Anthropic 클라우드 루틴 → Heartbeat 감시), 토큰 저장소 범위 갱신
+- claude.ai에 HQ용 읽기 전용 점검 Routine(API 트리거) 생성

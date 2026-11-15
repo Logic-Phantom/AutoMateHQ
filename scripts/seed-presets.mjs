@@ -28,6 +28,7 @@ for (const b of blocks) {
     category: field(b, 'category') ?? 'other',
     owner: field(b, 'repoOwner'),
     repo: field(b, 'repoName'),
+    branch: field(b, 'defaultBranch') ?? 'main',
     mode: field(b, 'monitoringMode') ?? 'github_actions',
     wf: field(b, 'workflowFile') ?? '*',
     event: field(b, 'workflowEvent') ?? 'any',
@@ -42,7 +43,7 @@ for (const b of blocks) {
     `INSERT INTO projects (project_key, name, description, category, repo_owner, repo_name, default_branch, repository_url, monitoring_mode,
        expected_cadence, expected_days, interval_hours, expected_time_local, timezone, grace_period_minutes, priority, maintenance_mode,
        maintenance_enabled, is_active, last_status, created_at, updated_at)
-     SELECT ${q(p.key)}, ${q(p.name)}, ${q(p.description)}, ${q(p.category)}, ${q(p.owner)}, ${q(p.repo)}, 'main', ${q(url)}, ${q(p.mode)},
+     SELECT ${q(p.key)}, ${q(p.name)}, ${q(p.description)}, ${q(p.category)}, ${q(p.owner)}, ${q(p.repo)}, ${q(p.branch)}, ${q(url)}, ${q(p.mode)},
        ${q(p.cadence)}, '', ${q(p.interval)}, ${q(p.time === undefined ? '07:00' : p.time)}, 'Asia/Seoul', ${p.grace}, ${q(p.priority)}, 'AUDIT', 0, 1, 'UNKNOWN', ${q(now)}, ${q(now)}
      WHERE NOT EXISTS (SELECT 1 FROM projects WHERE project_key = ${q(p.key)});`,
     `INSERT OR IGNORE INTO project_sources (project_id, source_type, external_identifier, config_json, is_enabled, created_at, updated_at)
