@@ -102,7 +102,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] 카카오 앱 아이콘 등록(`docs/assets/icon-256.png`, 256px PNG)
 - [x] 대시보드 로그인 → 카카오 로그인 연결 → 테스트 메시지 발송 성공(2026-11-15 17:49 KST, 카카오 응답 `200 / result_code 0`)
 - [ ] 다음 날 07:00~ 정기 보고서 실제 수신 확인
-- [ ] GitHub Fine-grained PAT 발급 후 연동 설정에 저장, 프로젝트 등록(“기존 저장소에서 추가”)
+- [x] GitHub Fine-grained PAT 발급(“AI Automation HQ”, 저장소 8개, Actions 읽기·쓰기 + Metadata 읽기, 2027-02-13 만료) 후 연동 설정에 저장 — Logic-Phantom으로 연결됨
+- [x] 프로젝트 7개 등록(`scripts/seed-presets.mjs` → D1, 대시보드 “기존 저장소에서 추가”와 같은 값)
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
 
@@ -119,3 +120,4 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 크롬에서 Kakao Developers 전용 앱 생성, 카카오 로그인·Redirect URI·talk_message·웹 도메인 설정, 앱 아이콘 등록
 - 카카오 REST API 키·클라이언트 시크릿 Cloudflare Secret 등록
 - KOE101 해결: PowerShell 파이프로 등록한 secret 끝의 CRLF 제거(재등록 + 코드에서 trim) → 카카오 연결·테스트 메시지 성공
+- 크롬에서 GitHub Fine-grained 토큰 생성(최소 저장소·권한), HQ 연결 확인, 기존 자동화 프로젝트 7개 등록
