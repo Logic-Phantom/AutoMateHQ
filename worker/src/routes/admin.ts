@@ -661,7 +661,12 @@ export function adminRoutes(deps: AppDeps) {
         kakaoRestApiKey: Boolean(env.KAKAO_REST_API_KEY),
         kakaoClientSecret: Boolean(env.KAKAO_CLIENT_SECRET),
       },
-      cron: { expression: '*/10 * * * *', note: 'Cloudflare Cron은 UTC 기준. 07:00~12:00 KST 사이 미발송 보고서를 발송(지연 복구).' },
+      cron: env.SCHEDULER_OIDC_REPOSITORY
+        ? {
+            expression: '*/10 * * * *',
+            note: `GitHub Actions(${env.SCHEDULER_OIDC_REPOSITORY} scheduler.yml, UTC)가 10분마다 깨움 — Cloudflare 무료 Cron 한도 대체. 실행이 지연될 수 있어 07:00~12:00 KST 사이 미발송 보고서를 따라잡아 발송.`,
+          }
+        : { expression: '*/10 * * * *', note: 'Cloudflare Cron은 UTC 기준. 07:00~12:00 KST 사이 미발송 보고서를 발송(지연 복구).' },
       onboarding: steps,
     });
   });

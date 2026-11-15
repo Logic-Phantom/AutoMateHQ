@@ -23,6 +23,8 @@ import { handleHeartbeat, type HeartbeatType } from '../services/heartbeat/servi
 import { completeOAuth, consumeOAuthState } from '../services/kakao/service';
 import { KakaoApiError, KakaoReauthRequired } from '../services/kakao/client';
 import { handleMaintenanceCallback } from '../services/maintenance/service';
+import { runScheduledTick } from '../scheduler';
+import { OidcError, verifyGithubOidc } from '../security/oidc';
 import { parseJsonBody, ok } from './helpers';
 
 export const OAUTH_STATE_COOKIE = 'hq_oauth_state';
@@ -114,6 +116,24 @@ export function publicRoutes(deps: AppDeps) {
   app.post('/api/v1/events', heartbeat('event'));
   // 게시 이벤트는 heartbeat와 같은 서명 계약을 쓴다(본문에 publication 필드)
   app.post('/api/publications/events', heartbeat('event'));
+
+  // ---------- 외부 스케줄러 트리거(GitHub Actions OIDC) ----------
+  // Cloudflare Cron 한도(무료 계정 5개)가 다 찬 경우의 대체 경로. 비밀 값 없이 OIDC 서명으로만 인증한다.
+  app.post('/api/v1/scheduler/tick', async (c) => {
+    const now = deps.now();
+    const repo = c.env.SCHEDULER_OIDC_REPOSITORY;
+    if (!repo) throw new AppError(404, 'NOT_FOUND', '없는 API 경로입니다.');
+    if (!(await rateLimit(c.env.DB, `tick:${await clientKey(c)}`, 6, 60, now))) throw tooMany();
+    const bearer = c.req.header('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+    try {
+      await verifyGithubOidc(bearer, deps.fetch, now, { repository: repo, workflowFile: 'scheduler.yml' });
+    } catch (err) {
+      await audit(c.env.DB, now, 'anonymous', 'scheduler.tick_rejected', 'scheduler', null, { reason: err instanceof OidcError ? err.message : 'error' });
+      throw new AppError(401, 'UNAUTHORIZED', '스케줄러 인증 실패');
+    }
+    const summary = await runScheduledTick(c.env, deps, now.getTime());
+    return ok(c, summary);
+  });
 
   // ---------- Maintenance callback (Routine → HQ) ----------
   app.post('/api/v1/maintenance/callback', async (c) => {

@@ -1,0 +1,38 @@
+name: hq-scheduler
+
+# Cloudflare 무료 계정의 Cron 5개 한도를 다른 Worker가 사용 중이라,
+# 이 워크플로가 10분마다 HQ 스케줄러(동기화·판정·07:00 KST 보고서·알림)를 깨운다.
+# 비밀 값은 쓰지 않는다. GitHub OIDC 토큰(저장소·브랜치·워크플로 파일이 서명에 포함)으로만 인증한다.
+# GitHub 예약 실행은 지연될 수 있다. HQ는 07:00~12:00 KST 사이 미발송 보고서를 따라잡아 보낸다.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: none
+
+concurrency:
+  group: hq-scheduler
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: HQ 스케줄러 호출
+        env:
+          HQ_URL: https://automatehq.dlacoaud96.workers.dev
+        run: |
+          set -euo pipefail
+          token=$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=automatehq-scheduler" | jq -r '.value')
+          echo "::add-mask::${token}"
+          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${token}" "${HQ_URL}/api/v1/scheduler/tick")
+          echo "HTTP ${status}"
+          jq -c '.data // .error' response.json || true
+          test "${status}" = "200"

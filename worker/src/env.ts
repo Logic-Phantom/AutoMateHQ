@@ -10,6 +10,8 @@ export interface Env {
   PUBLIC_BASE_URL?: string;
   /** 쉼표로 구분한 허용 Origin. 비어 있으면 PUBLIC_BASE_URL의 origin만 허용한다. */
   ALLOWED_ORIGINS?: string;
+  /** GitHub Actions 예약 워크플로가 스케줄러를 깨울 때 허용할 저장소(owner/name). 비우면 외부 트리거 비활성. */
+  SCHEDULER_OIDC_REPOSITORY?: string;
 
   // ---- secrets ----
   /** `npm run secret:password` 로 만든 PBKDF2 해시. 평문 비밀번호는 어디에도 저장하지 않는다. */

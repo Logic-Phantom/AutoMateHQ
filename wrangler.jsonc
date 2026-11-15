@@ -16,18 +16,22 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  "triggers": { "crons": ["*/10 * * * *"] },
+  // 이 계정은 무료 플랜 Cron 5개를 다른 Worker가 모두 사용 중이라 Cloudflare Cron을 등록하지 않는다.
+  // 대신 .github/workflows/scheduler.yml(10분 간격)이 POST /api/v1/scheduler/tick 을 OIDC 서명으로 호출한다.
+  // Cron 슬롯이 비면 ["*/10 * * * *"] 로 바꿔 Cloudflare Cron을 쓰면 된다(scheduled 핸들러는 그대로 있음).
+  "triggers": { "crons": [] },
   "vars": {
     "APP_MODE": "live",
     "APP_TIMEZONE": "Asia/Seoul",
-    "PUBLIC_BASE_URL": "",
-    "ALLOWED_ORIGINS": ""
+    "PUBLIC_BASE_URL": "https://automatehq.dlacoaud96.workers.dev",
+    "ALLOWED_ORIGINS": "",
+    "SCHEDULER_OIDC_REPOSITORY": "Logic-Phantom/AutoMateHQ"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "automatehq",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "a00e5b07-49d9-419a-8fc5-96fddd02d2d1",
       "migrations_dir": "worker/migrations"
     }
   ],
