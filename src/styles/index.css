@@ -1,0 +1,89 @@
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+@import 'tailwindcss';
+
+/*
+ * 디자인 토큰
+ * - taste-skill 원칙 중 대시보드에 맞는 것만 적용: 화면의 90~95%는 중립색, 따뜻한 near-black 잉크(#000 금지),
+ *   강조색은 파랑 하나(보라 계열 금지), 1px 헤어라인, 단단한(sharp) 모서리, 채운 버튼은 화면당 하나.
+ * - 차트 색은 dataviz 기준 팔레트(검증된 값)를 그대로 쓴다. 상태색은 차트 시리즈 색과 겹치지 않게 예약한다.
+ */
+@theme {
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+
+  --color-canvas: #f5f5f2; /* 페이지 바탕 */
+  --color-surface: #fdfdfc; /* 패널·차트 표면 */
+  --color-sunken: #f0efec; /* 표 머리·보조 바탕 */
+  --color-line: #e3e2dc; /* 헤어라인 */
+  --color-line-strong: #c9c8c0;
+  --color-ink: #1c1b19; /* 본문(7:1 이상) */
+  --color-ink-soft: #52514e; /* 보조 텍스트 */
+  --color-ink-mute: #706e68; /* 라벨·메타(4.5:1 이상) */
+
+  --color-brand: #2a78d6; /* 유일한 강조색: 주 버튼·포커스·선택 상태·차트 1번 */
+  --color-brand-ink: #1c5cab; /* 강조색 텍스트(링크) */
+  --color-brand-soft: #eaf2fc;
+
+  /* 상태(예약): 아이콘+라벨과 함께만 쓴다 */
+  --color-ok: #0ca30c;
+  --color-ok-ink: #006300;
+  --color-ok-soft: #eaf6ea;
+  --color-fail: #d03b3b;
+  --color-fail-ink: #b02a2a;
+  --color-fail-soft: #fbecec;
+  --color-warn: #fab219;
+  --color-warn-ink: #855700;
+  --color-warn-soft: #fdf4df;
+  --color-neutral: #8f8d86;
+  --color-neutral-ink: #5c5b56;
+  --color-neutral-soft: #efeee9;
+
+  /* sharp 반경 세트 4/6/8 */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss06';
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* 차트 툴팁 등 recharts 기본 글꼴을 본문과 맞춘다 */
+.recharts-wrapper,
+.recharts-tooltip-wrapper {
+  font-family: var(--font-sans);
+}
+.recharts-surface:focus,
+.recharts-wrapper:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

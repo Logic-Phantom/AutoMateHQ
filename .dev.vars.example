@@ -1,0 +1,15 @@
+# 로컬 개발용 비밀 값 예시. 이 파일을 .dev.vars 로 복사해 채운다(.dev.vars 는 Git에 커밋되지 않음).
+# 운영(Cloudflare)에서는 같은 이름으로 `npx wrangler secret put <이름>` 을 사용한다.
+
+# 관리자 비밀번호 PBKDF2 해시. `npm run secret:password` 결과.
+ADMIN_PASSWORD_HASH=
+# AES-256-GCM 키(base64 32바이트). `npm run secret:keygen` 결과. 토큰·secret 암호화에 사용.
+HQ_ENCRYPTION_KEY=
+# 키 교체 중에만: 이전 키(복호화 전용)
+# HQ_ENCRYPTION_KEY_PREVIOUS=
+# GitHub 저장소 Webhook 설정에 입력한 Secret 과 같은 값
+GITHUB_WEBHOOK_SECRET=
+# Kakao Developers > 앱 > 앱 키 > REST API 키
+KAKAO_REST_API_KEY=
+# Kakao Developers > 카카오 로그인 > 보안 > Client Secret (활성화한 경우)
+KAKAO_CLIENT_SECRET=
