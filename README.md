@@ -98,11 +98,12 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Cloudflare D1 생성·migration·Worker 배포, 비밀 값(암호화 키·관리자 비밀번호 해시·Webhook secret) 등록
 - [x] 스케줄러: 계정 Cron 5개 한도가 차 있어 GitHub Actions(`scheduler.yml`, 10분) + OIDC 인증으로 대체, 수동 실행 성공 확인
 - [x] Kakao Developers 앱 “AI Automation HQ”(ID 1651324): 카카오 로그인 ON, Redirect URI(운영·로컬), `talk_message` 선택 동의, 웹 도메인 등록
-- [ ] 카카오 키를 Cloudflare Secret에 등록(앱 > 플랫폼 키 > Default Rest API Key 화면의 REST API 키와 카카오 로그인 클라이언트 시크릿 코드): `npx wrangler secret put KAKAO_REST_API_KEY`, `npx wrangler secret put KAKAO_CLIENT_SECRET`
+- [x] 카카오 REST API 키·클라이언트 시크릿을 Cloudflare Secret에 등록(`KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`)
+- [x] 카카오 앱 아이콘 등록(`docs/assets/icon-256.png`, 256px PNG)
 - [ ] 대시보드 로그인(비밀번호: 로컬 `.secrets/admin-password.txt`) → 알림 → 카카오 로그인 연결 → 테스트 메시지
 - [ ] GitHub Fine-grained PAT 발급 후 연동 설정에 저장, 프로젝트 등록(“기존 저장소에서 추가”)
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
-- [ ] (선택) 앱 아이콘 등록(`docs/assets/icon.webp`), Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
+- [ ] (선택) Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
 
 ## 작업 내역
 
@@ -114,4 +115,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - taste-skill·dataviz 기준 디자인 정리, Recharts 차트(14일 누적 막대·스파크라인·상태 분포·실행 스트립·소요 시간 선·실행 시간 막대) 추가
 - 테스트 67개 + E2E 3개, CI 워크플로, 문서 10종
 - Cloudflare 배포(workers.dev, D1 APAC)·비밀 값 등록. 계정 Cron 한도 초과로 GitHub Actions OIDC 스케줄러(`/api/v1/scheduler/tick`) 추가·실행 검증(테스트 71개)
-- 크롬에서 Kakao Developers 전용 앱 생성, 카카오 로그인·Redirect URI·talk_message·웹 도메인 설정
+- 크롬에서 Kakao Developers 전용 앱 생성, 카카오 로그인·Redirect URI·talk_message·웹 도메인 설정, 앱 아이콘 등록
+- 카카오 REST API 키·클라이언트 시크릿 Cloudflare Secret 등록
