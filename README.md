@@ -4,9 +4,63 @@
 
 **여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 오전 7시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
 
-유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog), 생활형 앱 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
+유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog·GitHub Pages), GitHub 프로필, 포트폴리오(DevVibe) 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
-> 현재 상태: **Cloudflare 배포 완료** — https://automatehq.dlacoaud96.workers.dev (health·ready 정상). 스케줄러는 GitHub Actions OIDC 트리거로 동작 확인. **카카오 연결·테스트 메시지 발송 성공.** 07:00 정기 보고서 실제 수신과 GitHub 연결은 대기(아래 “남은 일”).
+> 현재 상태(2026-11-15 18:15 KST): **운영 중** — https://automatehq.dlacoaud96.workers.dev
+> GitHub·카카오톡·Claude Routine 모두 `connected`. 프로젝트 9개 감시. 07:00 정기 보고서 첫 실수신은 아직 확인 전.
+> 다음 작업은 바로 아래 **“다음 세션에서 이어서 하기”** 부터.
+
+## 다음 세션에서 이어서 하기
+
+### 1. 먼저 확인할 것(순서대로)
+
+1. **GitHub 예약 실행이 시작됐는지** — 2026-11-15 18:15 기준 `hq-scheduler`는 수동 실행(`workflow_dispatch`) 2회뿐이고 `schedule` 이벤트 실행이 아직 없었다. 새 워크플로는 GitHub가 예약 실행을 늦게 시작하기도 한다.
+
+   ```bash
+   curl -s "https://api.github.com/repos/Logic-Phantom/AutoMateHQ/actions/workflows/scheduler.yml/runs?per_page=10"
+   ```
+
+   `"event": "schedule"` 실행이 계속 없으면 07:00 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
+2. **07:00 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지.
+3. **나머지 6개 프로젝트 동기화** — 스케줄러가 1회에 3개씩 동기화한다. `last_synced_at`이 채워졌는지.
+
+```bash
+npx wrangler d1 execute automatehq --remote --command "SELECT project_key, last_status, last_status_reason, last_synced_at FROM projects WHERE deleted_at IS NULL"
+```
+
+```bash
+npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local, status, sent_at, safe_error_message FROM daily_reports ORDER BY report_date_local DESC LIMIT 3"
+```
+
+### 2. 남은 작업(우선순위)
+
+| # | 작업 | 메모 |
+|---|---|---|
+| 1 | DevVibe Heartbeat 연결 | HQ 프로젝트 상세(DevVibe)에서 Heartbeat 키 발급 → claude.ai “DevVibe 포트폴리오 매일 자동 갱신” 루틴 지침 끝에 HQ 보고 단계 추가(docs/HEARTBEAT_INTEGRATION.md). 루틴 클라우드 네트워크에서 workers.dev 호출 가능 여부 먼저 확인. **기존 루틴 수정이라 사용자 확인 후 진행** |
+| 2 | Claude Routine 첫 호출 검증 | 대시보드 > 프로젝트 상세 > AI 유지보수 실행(AUDIT) → 세션 링크·결과 회신 확인. 회신이 막히면 세션에서 결과 확인 |
+| 3 | StrangeRecords 오케스트레이터 루틴 | claude.ai에 매일 07:00 “StrangeRecords Daily Production Orchestrator” 루틴이 있음. Actions와 별개로 Heartbeat 보고를 붙일지 결정 |
+| 4 | (선택) GitHub Webhook | 저장소별 Webhook 등록하면 10분 폴링 대신 즉시 반영. Secret은 `.secrets/github-webhook-secret.txt` |
+| 5 | (선택) 게시 상태 연동 | 각 YouTube/Instagram 파이프라인에 publication 이벤트 전송(기존 저장소 수정 필요) |
+
+### 3. 운영 정보(값 자체는 저장소에 없음)
+
+| 항목 | 값/위치 |
+|---|---|
+| 대시보드 | https://automatehq.dlacoaud96.workers.dev (관리자 비밀번호: 로컬 `.secrets/admin-password.txt`, Git 제외) |
+| Cloudflare | Worker `automatehq`, D1 `automatehq`(APAC, id `a00e5b07-…`), 계정 Cron 5개 한도 사용 중 |
+| Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
+| 스케줄러 | `.github/workflows/scheduler.yml`(10분) → `POST /api/v1/scheduler/tick`, GitHub OIDC 인증(비밀 값 없음) |
+| 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
+| GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 10개, Actions RW + Metadata R, **2027-02-13 만료** |
+| Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
+| 프로젝트 등록 | `node scripts/seed-presets.mjs > .wrangler/presets.sql` → `npx wrangler d1 execute automatehq --remote --file .wrangler/presets.sql` (있는 key는 건너뜀) |
+| 배포 | `npm run deploy` 또는 `npx vite build` → `npx wrangler deploy` |
+
+### 4. 주의 사항
+
+- **secret 등록은 PowerShell 파이프로 하지 않는다**(값 끝에 CRLF가 붙어 KOE101 발생). 직접 프롬프트에 붙여 넣거나 Node `spawnSync(..., { input: value.trim() })`.
+- 기존 프로젝트 저장소와 기존 claude.ai 루틴은 사용자 확인 없이 수정하지 않는다.
+- 토큰·시크릿 값은 채팅·로그·README에 남기지 않는다. 브라우저에서 생성된 토큰은 사용자가 직접 복사해 HQ에 입력한다.
 
 ## 주요 기능
 
@@ -93,7 +147,7 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - `npm run test:e2e`: **3개 통과**(로그인·대시보드 차트, 재실행 확인 모달, 카카오 보고서 미리보기 200자)
 - `vite build` 성공, `wrangler deploy --dry-run` 번들 성공(gzip 약 184 KiB)
 
-## 남은 일(본인 작업 필요)
+## 진행 체크리스트
 
 - [x] Cloudflare D1 생성·migration·Worker 배포, 비밀 값(암호화 키·관리자 비밀번호 해시·Webhook secret) 등록
 - [x] 스케줄러: 계정 Cron 5개 한도가 차 있어 GitHub Actions(`scheduler.yml`, 10분) + OIDC 인증으로 대체, 수동 실행 성공 확인
@@ -106,10 +160,13 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] 프로젝트 등록(`scripts/seed-presets.mjs` → D1, 대시보드 “기존 저장소에서 추가”와 같은 값): StrangeRecords·FactBokAI·CHIPLY·청약·고정비·TechLog·GitHub 프로필·기술 블로그(Pages)·DevVibe. 점심합의는 감시 제외(이력 보관)
 - [x] GitHub 토큰 저장소 범위 갱신(점심합의 제외, Logic-Phantom·Logic-Phantom.github.io·DevVibe 추가 → 10개)
 - [x] Claude Code Routine “AI Automation HQ 읽기 전용 점검” 생성(API 트리거, 감시 저장소 10개)
-- [ ] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit) — 토큰은 생성 시 1회만 표시
-- [ ] DevVibe: 매일 09:00 루틴이 HQ에 Heartbeat를 보내도록 연결(HQ에서 Heartbeat 키 발급 → 루틴 지침에 보고 단계 추가). 연결 전까지 ‘확인 불가’
+- [x] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit, 표시 이름 “데일리”) — `connected`
+- [ ] GitHub `schedule` 예약 실행 시작 확인(현재 수동 실행 2회뿐)
+- [ ] 나머지 6개 프로젝트 첫 동기화 확인
+- [ ] DevVibe: 매일 09:00 루틴이 HQ에 Heartbeat를 보내도록 연결. 연결 전까지 ‘확인 불가’
+- [ ] Claude Routine 첫 AUDIT 호출·결과 회신 검증
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
-- [ ] (선택) Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
+- [ ] (선택) 각 YouTube/Instagram 파이프라인 게시 이벤트 연동(기존 저장소 수정 필요 — 별도 작업)
 
 ## 작업 내역
 
@@ -126,4 +183,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - KOE101 해결: PowerShell 파이프로 등록한 secret 끝의 CRLF 제거(재등록 + 코드에서 trim) → 카카오 연결·테스트 메시지 성공
 - 크롬에서 GitHub Fine-grained 토큰 생성(최소 저장소·권한), HQ 연결 확인, 기존 자동화 프로젝트 7개 등록
 - 점심합의 감시 제외, GitHub 프로필·기술 블로그·DevVibe 추가(DevVibe는 Anthropic 클라우드 루틴 → Heartbeat 감시), 토큰 저장소 범위 갱신
-- claude.ai에 HQ용 읽기 전용 점검 Routine(API 트리거) 생성
+- claude.ai에 HQ용 읽기 전용 점검 Routine(API 트리거, 저장소 10개) 생성 → 사용자가 HQ에 등록, `connected` 확인
+- 마감 시점 상태: 연동 3종 connected, 프로젝트 9개(동기화 완료 3·대기 6), 수집된 실행 45건, 카카오 테스트 메시지 1건 발송. GitHub 예약 실행은 아직 시작 전(수동 2회)
