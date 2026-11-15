@@ -17,10 +17,12 @@ export interface KakaoTokens {
 export const KAKAO_CALLBACK_PATH = '/api/integrations/kakao/callback';
 
 export function kakaoAppConfig(env: Env): KakaoAppConfig | null {
-  if (!env.KAKAO_REST_API_KEY || !env.PUBLIC_BASE_URL) return null;
+  // secret 등록 시 붙은 공백·개행(\r\n)이 있으면 카카오가 KOE101로 거부하므로 정리한다.
+  const restApiKey = env.KAKAO_REST_API_KEY?.trim();
+  if (!restApiKey || !env.PUBLIC_BASE_URL) return null;
   return {
-    restApiKey: env.KAKAO_REST_API_KEY,
-    clientSecret: env.KAKAO_CLIENT_SECRET || undefined,
+    restApiKey,
+    clientSecret: env.KAKAO_CLIENT_SECRET?.trim() || undefined,
     redirectUri: `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}${KAKAO_CALLBACK_PATH}`,
   };
 }
