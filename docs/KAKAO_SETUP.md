@@ -5,6 +5,13 @@ HQ는 **카카오톡 메시지 REST API의 ‘나에게 기본 템플릿으로 �
 
 > 앱 아이콘은 Kakao Developers > 앱 > 일반 > 앱 아이콘에서 `docs/assets/icon.webp`를 PNG로 변환해 등록하면 된다.
 
+## 현재 설정(2026-11-15)
+
+앱 **AI Automation HQ (ID 1651324)** 생성 완료: 카카오 로그인 ON · Redirect URI `https://automatehq.dlacoaud96.workers.dev/api/integrations/kakao/callback`, `http://localhost:5173/api/integrations/kakao/callback` · `talk_message` 선택 동의 · 웹 도메인 `https://automatehq.dlacoaud96.workers.dev` · Client Secret ON(기본값).
+남은 일: REST API 키·클라이언트 시크릿을 Cloudflare Secret에 등록 → 대시보드 알림 화면에서 연결.
+
+> 새 콘솔에서는 Redirect URI와 Client Secret이 **앱 > 플랫폼 키 > REST API 키 수정** 화면에 있다.
+
 ## 1. 앱 준비
 
 **권장: HQ 전용 앱을 새로 만든다.** CHIPLY·청약 브리핑처럼 기존 브리핑 앱과 같은 앱을 공유하면, 한쪽에서 ‘연결 끊기(unlink)’를 할 때 다른 프로젝트의 토큰도 함께 무효가 될 수 있다. (HQ의 연결 해제는 unlink가 아닌 로컬 삭제/로그아웃만 쓴다.)

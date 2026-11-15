@@ -67,6 +67,16 @@ curl -s https://<배포 주소>/api/health/ready
 
 `ready`가 200이면 DB·암호화 키·관리자 비밀번호가 준비된 것이다. 이후 대시보드의 **연동 설정 > 온보딩 체크리스트**를 따라간다.
 
+## 스케줄러: Cloudflare Cron 대신 GitHub Actions(현재 구성)
+
+이 계정은 무료 플랜 Cron 5개를 다른 Worker가 모두 쓰고 있어 `wrangler deploy` 때 Cron 등록이 실패한다(code 10072). 그래서:
+
+- `wrangler.jsonc`의 `triggers.crons`는 비우고 `vars.SCHEDULER_OIDC_REPOSITORY = "Logic-Phantom/AutoMateHQ"`로 외부 트리거를 켠다.
+- `.github/workflows/scheduler.yml`이 10분마다 `POST /api/v1/scheduler/tick`을 호출한다.
+- 인증은 GitHub OIDC 토큰(RS256, `aud=automatehq-scheduler`, 저장소·`refs/heads/main`·`scheduler.yml`·이벤트 schedule/workflow_dispatch 검증). 공유 비밀 값 없음.
+- 공개 저장소라 Actions 사용 시간은 무료. 예약 실행은 지연될 수 있어 보고서는 07:00~12:00 KST 사이에 따라잡아 보낸다.
+- Cron 슬롯이 생기면 `triggers.crons`를 `["*/10 * * * *"]`로 바꾸고 `SCHEDULER_OIDC_REPOSITORY`를 비운 뒤 워크플로를 끄면 된다.
+
 ## 암호화 키 교체
 
 1. 기존 키를 `HQ_ENCRYPTION_KEY_PREVIOUS`로 등록하고 새 키를 `HQ_ENCRYPTION_KEY`로 등록한다.

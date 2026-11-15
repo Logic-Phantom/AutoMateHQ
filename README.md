@@ -6,7 +6,7 @@
 
 유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog), 생활형 앱 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
-> 현재 상태: **구현 완료 / 계정 연결 대기.** 로컬 샘플 모드로 전체 화면을 바로 확인할 수 있다. Cloudflare 배포·카카오·GitHub·Claude Routine 연결은 아직 하지 않았다(아래 “남은 일” 참고).
+> 현재 상태: **Cloudflare 배포 완료** — https://automatehq.dlacoaud96.workers.dev (health·ready 정상). 스케줄러는 GitHub Actions OIDC 트리거로 동작 확인. Kakao Developers 앱(ID 1651324) 설정 완료, **카카오 키 등록·계정 연결은 대기**(아래 “남은 일”).
 
 ## 주요 기능
 
@@ -89,17 +89,20 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 ## 테스트 결과(2026-11-15 로컬)
 
 - `npm run typecheck` 통과 · `npm run lint` 통과
-- `npm test`: **67개 통과**(판정 14 · GitHub 9 · Heartbeat 7 · 카카오 10 · 유지보수 9 · 보안 13 · 컴포넌트 5)
+- `npm test`: **71개 통과**(판정 14 · GitHub 9 · Heartbeat 7 · 카카오 10 · 유지보수 9 · 보안 13 · 스케줄러 OIDC 4 · 컴포넌트 5)
 - `npm run test:e2e`: **3개 통과**(로그인·대시보드 차트, 재실행 확인 모달, 카카오 보고서 미리보기 200자)
 - `vite build` 성공, `wrangler deploy --dry-run` 번들 성공(gzip 약 184 KiB)
 
-## 남은 일(계정 필요)
+## 남은 일(본인 작업 필요)
 
-- [ ] Cloudflare: `wrangler d1 create automatehq` → `database_id`·`PUBLIC_BASE_URL` 기입 → secret 등록 → `npm run deploy`
-- [ ] Kakao Developers 앱 생성(아이콘: `docs/assets/icon.webp`)·Redirect URI·talk_message·도메인 → 연결·테스트 메시지
-- [ ] GitHub Fine-grained PAT 저장, 프로젝트 등록(제안 목록), 필요 시 Webhook
-- [ ] (선택) Claude Code Routine 생성 후 Fire URL·토큰 등록
-- [ ] (선택) 각 프로젝트에 Heartbeat/게시 이벤트 추가 — 기존 저장소 수정이 필요하므로 별도 작업으로 진행
+- [x] Cloudflare D1 생성·migration·Worker 배포, 비밀 값(암호화 키·관리자 비밀번호 해시·Webhook secret) 등록
+- [x] 스케줄러: 계정 Cron 5개 한도가 차 있어 GitHub Actions(`scheduler.yml`, 10분) + OIDC 인증으로 대체, 수동 실행 성공 확인
+- [x] Kakao Developers 앱 “AI Automation HQ”(ID 1651324): 카카오 로그인 ON, Redirect URI(운영·로컬), `talk_message` 선택 동의, 웹 도메인 등록
+- [ ] 카카오 키를 Cloudflare Secret에 등록(앱 > 플랫폼 키 > Default Rest API Key 화면의 REST API 키와 카카오 로그인 클라이언트 시크릿 코드): `npx wrangler secret put KAKAO_REST_API_KEY`, `npx wrangler secret put KAKAO_CLIENT_SECRET`
+- [ ] 대시보드 로그인(비밀번호: 로컬 `.secrets/admin-password.txt`) → 알림 → 카카오 로그인 연결 → 테스트 메시지
+- [ ] GitHub Fine-grained PAT 발급 후 연동 설정에 저장, 프로젝트 등록(“기존 저장소에서 추가”)
+- [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
+- [ ] (선택) 앱 아이콘 등록(`docs/assets/icon.webp`), Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
 
 ## 작업 내역
 
@@ -110,3 +113,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - React 대시보드 10개 화면 + 로그인, 샘플 모드(별도 D1, 14일 샘플 데이터)
 - taste-skill·dataviz 기준 디자인 정리, Recharts 차트(14일 누적 막대·스파크라인·상태 분포·실행 스트립·소요 시간 선·실행 시간 막대) 추가
 - 테스트 67개 + E2E 3개, CI 워크플로, 문서 10종
+- Cloudflare 배포(workers.dev, D1 APAC)·비밀 값 등록. 계정 Cron 한도 초과로 GitHub Actions OIDC 스케줄러(`/api/v1/scheduler/tick`) 추가·실행 검증(테스트 71개)
+- 크롬에서 Kakao Developers 전용 앱 생성, 카카오 로그인·Redirect URI·talk_message·웹 도메인 설정
