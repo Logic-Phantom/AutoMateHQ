@@ -6,7 +6,7 @@
 
 유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog), 생활형 앱 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
-> 현재 상태: **Cloudflare 배포 완료** — https://automatehq.dlacoaud96.workers.dev (health·ready 정상). 스케줄러는 GitHub Actions OIDC 트리거로 동작 확인. Kakao Developers 앱(ID 1651324) 설정 완료, **카카오 키 등록·계정 연결은 대기**(아래 “남은 일”).
+> 현재 상태: **Cloudflare 배포 완료** — https://automatehq.dlacoaud96.workers.dev (health·ready 정상). 스케줄러는 GitHub Actions OIDC 트리거로 동작 확인. **카카오 연결·테스트 메시지 발송 성공.** 07:00 정기 보고서 실제 수신과 GitHub 연결은 대기(아래 “남은 일”).
 
 ## 주요 기능
 
@@ -100,7 +100,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Kakao Developers 앱 “AI Automation HQ”(ID 1651324): 카카오 로그인 ON, Redirect URI(운영·로컬), `talk_message` 선택 동의, 웹 도메인 등록
 - [x] 카카오 REST API 키·클라이언트 시크릿을 Cloudflare Secret에 등록(`KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`)
 - [x] 카카오 앱 아이콘 등록(`docs/assets/icon-256.png`, 256px PNG)
-- [ ] 대시보드 로그인(비밀번호: 로컬 `.secrets/admin-password.txt`) → 알림 → 카카오 로그인 연결 → 테스트 메시지
+- [x] 대시보드 로그인 → 카카오 로그인 연결 → 테스트 메시지 발송 성공(2026-11-15 17:49 KST, 카카오 응답 `200 / result_code 0`)
+- [ ] 다음 날 07:00~ 정기 보고서 실제 수신 확인
 - [ ] GitHub Fine-grained PAT 발급 후 연동 설정에 저장, 프로젝트 등록(“기존 저장소에서 추가”)
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) Claude Code Routine 등록, 각 프로젝트 Heartbeat 연동(기존 저장소 수정 필요 — 별도 작업)
@@ -117,3 +118,4 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - Cloudflare 배포(workers.dev, D1 APAC)·비밀 값 등록. 계정 Cron 한도 초과로 GitHub Actions OIDC 스케줄러(`/api/v1/scheduler/tick`) 추가·실행 검증(테스트 71개)
 - 크롬에서 Kakao Developers 전용 앱 생성, 카카오 로그인·Redirect URI·talk_message·웹 도메인 설정, 앱 아이콘 등록
 - 카카오 REST API 키·클라이언트 시크릿 Cloudflare Secret 등록
+- KOE101 해결: PowerShell 파이프로 등록한 secret 끝의 CRLF 제거(재등록 + 코드에서 trim) → 카카오 연결·테스트 메시지 성공
