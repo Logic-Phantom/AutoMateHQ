@@ -67,7 +67,7 @@
 
 1. Cron(10분 간격, UTC) → Asia/Seoul 시각 계산
 2. 12:00 ≤ 현지 시각 < 22:00 이고 `daily_reports.report_date_local`에 sent 없음 → 진행(지연 복구)
-3. 잠금(`job_locks`) → 판정 → 보고서 JSON → 카카오 메시지(각 200자 이하, 최대 3개)
+3. 잠금(`job_locks`) → 판정 → 보고서 JSON → 카카오 메시지(200자 이하 한 건)
 4. 토큰 갱신(필요 시) → 나에게 보내기 → 결과를 `daily_reports`·`notification_deliveries`에 기록
 5. 실패 시 다음 Cron에서 재시도(최대 3회). 재인증 필요·미설정은 즉시 종료 상태로 남김.
 

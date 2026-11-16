@@ -1,4 +1,4 @@
-import { KAKAO_MAX_MESSAGES_PER_REPORT, KAKAO_TEXT_LIMIT, type ProjectStatus } from '../../../../shared/constants';
+import { KAKAO_TEXT_LIMIT, type ProjectStatus } from '../../../../shared/constants';
 import { formatKoreanDateTime, formatLocalTime } from '../../lib/time';
 import { primaryReason, summarize } from '../monitoring/classifier';
 import type { ProjectEvaluation } from '../monitoring/evaluate';
@@ -95,48 +95,61 @@ function clip(s: string, max: number): string {
   return len(s) <= max ? s : [...s].slice(0, Math.max(0, max - 1)).join('') + '…';
 }
 
-/** 줄 단위로 200자 한도에 맞춰 담고, 넘치면 남은 개수를 요약한다. */
-function packLines(header: string, lines: string[], overflowLabel: (n: number) => string): string {
-  let text = header;
-  for (let i = 0; i < lines.length; i++) {
-    const candidate = `${text}\n${lines[i]}`;
-    const rest = lines.length - i - 1;
-    const reserve = rest > 0 ? len(`\n${overflowLabel(rest)}`) : 0;
-    if (len(candidate) + reserve > KAKAO_TEXT_LIMIT) {
-      return `${text}\n${overflowLabel(lines.length - i)}`;
-    }
-    text = candidate;
-  }
-  return text;
+/** 정기 보고서 머리줄용 짧은 시각. 예: 11.16 (일) 12:00 */
+function shortDateTime(now: Date, tz: string): string {
+  return formatKoreanDateTime(now, tz).replace(/^\d{4}\./, '');
 }
 
 /**
- * 일일 보고서를 카카오 텍스트 메시지(각 200자 이하, 최대 3개)로 만든다.
- * 1) 요약(건수 + 실패/확인 필요 프로젝트명)  2) 실패·확인 필요 상세  3) 정상 요약 + 운영 분석
- * 전체 내용은 버튼 링크(대시보드 보고서 페이지)에서 본다.
+ * 일일 보고서를 카카오 텍스트 메시지 한 건(200자 이하)으로 만든다. 한눈에 읽히게 묶음 사이에 빈 줄을 둔다.
+ *   제목 / 상태 건수 / 문제 프로젝트(이름 + 원인 한 줄) / 한줄 분석
+ * 정상 프로젝트 이름과 상세 원인은 버튼 링크(대시보드 보고서 페이지)에서 본다.
+ * 200자를 넘으면 문제 프로젝트를 뒤에서부터 '외 N건'으로 접는다. 분석 줄은 남는 자리만큼 줄인다.
  */
 export function renderKakaoMessages(r: DailyReport, now: Date): string[] {
   const c = r.counts;
-  const sample = r.isSample ? '[샘플 데이터] ' : '';
-  const head = `${sample}🤖 AI Automation HQ\n${formatKoreanDateTime(now, r.timezone)} KST`;
-  const countLine = `총 ${c.total}개 · 🟢${c.NORMAL} 🔴${c.FAILED} 🟡${c.ATTENTION}${c.UNKNOWN ? ` ⚪${c.UNKNOWN}` : ''}`;
-  const names = [...r.failed.map((x) => `🔴 ${clip(x.name, 18)}`), ...r.attention.map((x) => `🟡 ${clip(x.name, 18)}`)];
-  const msg1 = packLines(`${head}\n${countLine}`, names, (n) => `외 ${n}개 확인 필요`);
-
-  const messages = [msg1];
-  const details = [
-    ...r.failed.map((x) => `🔴${clip(x.name, 14)}: ${clip(x.reason, 46)}${x.lastRunAt ? ` (${formatLocalTime(x.lastRunAt, r.timezone)})` : ''}`),
-    ...r.attention.map((x) => `🟡${clip(x.name, 14)}: ${clip(x.reason, 46)}`),
+  const head = `${r.isSample ? '[샘플] ' : ''}🤖 HQ 운영 보고 · ${shortDateTime(now, r.timezone)}`;
+  const problems = c.FAILED + c.ATTENTION;
+  const status: string[] = [
+    problems === 0 && c.UNKNOWN === 0 && c.total > 0
+      ? `✅ ${c.total}개 모두 정상`
+      : [`🔴 실패 ${c.FAILED}`, `🟡 확인 ${c.ATTENTION}`, `🟢 정상 ${c.NORMAL}`, ...(c.UNKNOWN ? [`⚪ 미확인 ${c.UNKNOWN}`] : [])].join(' · '),
   ];
-  if (details.length > 0) messages.push(packLines('[상세]', details, (n) => `외 ${n}건은 HQ에서 확인`));
+  if (r.globalIssues.length) status.push(`⚠️ ${clip(r.globalIssues.join(' / '), 40)}`);
 
-  const label = r.analysisKind === 'ai' ? '🧠 AI 분석' : '🧭 자동 점검 요약';
-  const normalNames = r.normal.slice(0, 4).map((x) => clip(x.name, 16));
-  const normalLine =
-    r.normal.length === 0 ? '' : `🟢 ${normalNames.join(', ')}${r.normal.length > 4 ? ` 외 ${r.normal.length - 4}개` : ''} 정상\n`;
-  const globalLine = r.globalIssues.length ? `⚠️ ${clip(r.globalIssues.join(' / '), 60)}\n` : '';
-  const prefix = `${normalLine}${globalLine}${label}\n`;
-  messages.push(prefix + clip(r.analysis, KAKAO_TEXT_LIMIT - len(prefix)));
+  const problemList = [...r.failed.map((x) => ['🔴', x] as const), ...r.attention.map((x) => ['🟡', x] as const)];
+  // 자세히: 이름 + 원인 한 줄(아이콘이 이미 실패를 뜻하므로 '최근 실행 실패:' 머리말은 뺀다). 짧게: 이름만
+  const detailed = problemList.map(([icon, x]) => {
+    const when = x.lastRunAt ? ` · ${formatLocalTime(x.lastRunAt, r.timezone)}` : '';
+    return `${icon} ${clip(x.name, 26)}\n   └ ${clip(x.reason.replace(/^최근 실행 실패:\s*/, ''), 34)}${when}`;
+  });
+  const compact = problemList.map(([icon, x]) => `${icon} ${clip(x.name, 26)}`);
+  const label = r.analysisKind === 'ai' ? '🧠 AI 분석' : '🧭 점검 요약';
 
-  return messages.slice(0, KAKAO_MAX_MESSAGES_PER_REPORT).map((m) => clip(m, KAKAO_TEXT_LIMIT));
+  const compose = (items: string[], shown: number): { text: string; hasAnalysis: boolean } => {
+    const blocks = [head, status.join('\n')];
+    if (items.length) {
+      const rest = items.length - shown;
+      blocks.push([...items.slice(0, shown), ...(rest > 0 ? [`외 ${rest}건은 HQ에서 확인`] : [])].join('\n'));
+    }
+    const base = blocks.join('\n\n');
+    const room = Math.min(KAKAO_TEXT_LIMIT - len(base) - len(`\n\n${label}\n`), 80);
+    if (room < 16) return { text: base, hasAnalysis: false };
+    return { text: `${base}\n\n${label}\n${clip(r.analysis, room)}`, hasAnalysis: true };
+  };
+  const fits = (out: { text: string; hasAnalysis: boolean }, needAnalysis: boolean) =>
+    len(out.text) <= KAKAO_TEXT_LIMIT && (out.hasAnalysis || !needAnalysis);
+
+  // 1) 문제를 전부 원인까지 2) 전부 이름만 3) 이름만 앞에서부터(최소 1개) — 분석 줄이 함께 들어가는 첫 형태를 쓴다
+  const n = problemList.length;
+  const tries: Array<[string[], number]> = [[detailed, n], [compact, n]];
+  for (let shown = n - 1; shown >= Math.min(1, n); shown--) tries.push([compact, shown]);
+  for (const needAnalysis of [true, false]) {
+    for (const [items, shown] of tries) {
+      const out = compose(items, shown);
+      if (fits(out, needAnalysis)) return [out.text];
+    }
+  }
+  const last = compose(compact, 0);
+  return [clip(last.text, KAKAO_TEXT_LIMIT)];
 }

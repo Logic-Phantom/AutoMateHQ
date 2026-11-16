@@ -179,7 +179,7 @@ describe('12:00 정기 보고서', () => {
     expect(h.db.count('daily_reports')).toBe(0);
   });
 
-  it('카카오 메시지는 각 200자 이하, 최대 3개로 렌더링되고 AI 미연결 시 자동 점검 요약으로 표기한다', () => {
+  it('카카오 메시지는 200자 이하 한 건으로 렌더링되고 AI 미연결 시 점검 요약으로 표기한다', () => {
     const now = new Date('2026-11-15T22:00:00Z');
     const evals = Array.from({ length: 12 }, (_, i) => ({
       project: { id: i + 1, name: `아주 긴 이름의 자동화 프로젝트 ${i + 1}번`, is_active: 1, priority: 'normal' },
@@ -194,10 +194,34 @@ describe('12:00 정기 보고서', () => {
     }));
     const report = buildDailyReport(evals as never, { reportDate: '2026-11-16', now, timezone: 'Asia/Seoul', globalIssues: [], isSample: false });
     const msgs = renderKakaoMessages(report, now);
-    expect(msgs.length).toBeLessThanOrEqual(3);
-    for (const m of msgs) expect([...m].length).toBeLessThanOrEqual(KAKAO_TEXT_LIMIT);
-    expect(msgs[0]).toContain('총 12개');
-    expect(msgs.join('\n')).toContain('자동 점검 요약');
-    expect(msgs.join('\n')).not.toContain('AI 분석');
+    expect(msgs).toHaveLength(1);
+    const m = msgs[0] ?? '';
+    expect([...m].length).toBeLessThanOrEqual(KAKAO_TEXT_LIMIT);
+    expect(m).toContain('🔴 실패 4 · 🟡 확인 4 · 🟢 정상 4');
+    expect(m).toMatch(/외 \d+건은 HQ에서 확인/); // 넘치는 프로젝트는 건수로 접는다
+    expect(m).toContain('🧭 점검 요약');
+    expect(m).not.toContain('AI 분석');
+    expect(m.split('\n\n').length).toBeGreaterThanOrEqual(4); // 제목 / 건수 / 문제 / 요약 묶음 사이 빈 줄
+  });
+
+  it('카카오 메시지: 모두 정상이면 짧게, 문제 1건이면 원인과 AI 분석까지 보여 준다', () => {
+    const now = new Date('2026-11-16T03:00:00Z');
+    const ev = (id: number, name: string, status: string, message: string) => ({
+      project: { id, name, is_active: 1, priority: 'normal' },
+      classification: { status, reasons: [{ code: 'X', severity: 'high', message, managed: true }], lastRun: null, lastSuccessAt: null, nextExpectedAt: null, dueAt: null },
+    });
+    const normal = [1, 2, 3].map((i) => ev(i, `정상 ${i}`, 'NORMAL', '정상'));
+    const ok = buildDailyReport(normal as never, { reportDate: '2026-11-16', now, timezone: 'Asia/Seoul', globalIssues: [], isSample: false });
+    const okMsg = renderKakaoMessages(ok, now)[0] ?? '';
+    expect(okMsg).toBe('🤖 HQ 운영 보고 · 11.16 (월) 12:00\n\n✅ 3개 모두 정상\n\n🧭 점검 요약\n모든 활성 프로젝트가 정상입니다.');
+
+    const failed = [ev(9, '기술 블로그 (GitHub Pages)', 'FAILED', '최근 실행 실패: pages-build-deployment failure'), ...normal];
+    const ai = buildDailyReport(failed as never, {
+      reportDate: '2026-11-16', now, timezone: 'Asia/Seoul', globalIssues: [], isSample: false, aiAnalysis: '블로그 배포만 재실행하면 됩니다.',
+    });
+    const aiMsg = renderKakaoMessages(ai, now)[0] ?? '';
+    expect(aiMsg).toContain('🔴 기술 블로그 (GitHub Pages)\n   └ pages-build-deployment failure');
+    expect(aiMsg).not.toContain('최근 실행 실패:'); // 아이콘과 겹치는 머리말은 뺀다
+    expect(aiMsg.endsWith('🧠 AI 분석\n블로그 배포만 재실행하면 됩니다.')).toBe(true);
   });
 });
