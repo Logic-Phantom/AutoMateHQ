@@ -228,4 +228,4 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 맥에서 Playwright E2E 3개 통과. 데모 환경 `SCHEDULER_OIDC_REPOSITORY` 빈 값 명시(wrangler 경고 제거)
 - StrangeRecords 오케스트레이터 확인: 루틴이 07:07에 `daily-shorts.yml`을 `workflow_dispatch`로 실행하고 HQ가 이미 수집 중 → Heartbeat는 게시 결과(YouTube 링크) 추적용이며 루틴 환경 허용 도메인 설정 후 검토(보류)
 - claude.ai 루틴 환경 `Default` 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(이전: 허용 도메인 없음). StrangeRecords Heartbeat 검토의 선행 조건 해소
-- 기술 블로그 실패 job을 HQ에서 재실행(GitHub 201 수락, 12:55까지 대기열). 재실행 대기(같은 회차 queued) 동기화 때 실패 run의 `error_code`가 지워지던 문제 수정(`runs.ts`, 테스트 76개 통과) — 운영 배포는 아직
+- 기술 블로그 실패 job을 HQ에서 재실행(GitHub 201 수락, 12:55까지 대기열). 재실행 대기(같은 회차 queued) 동기화 때 실패 run의 `error_code`가 지워지던 문제 수정(`runs.ts`, 테스트 76개 통과) — 운영 배포 완료(버전 50cee018)
