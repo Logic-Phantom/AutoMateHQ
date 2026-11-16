@@ -83,6 +83,14 @@ describe('GitHub Webhook', () => {
     expect(h.db.get<{ status: string }>(`SELECT status FROM runs WHERE external_run_id='103'`).status).toBe('failure');
   });
 
+  it('실패한 run이 재실행 대기(같은 회차 queued)로 바뀌어도 실패 상태와 오류 코드를 유지한다', async () => {
+    const h = await createHarness();
+    await setupProject(h);
+    await sendWebhook(h, workflowRunPayload(106, 'failure'), 'd-6a');
+    await sendWebhook(h, workflowRunPayload(106, null, 'queued'), 'd-6b');
+    expect(h.db.get(`SELECT status, error_code FROM runs WHERE external_run_id='106'`)).toEqual({ status: 'failure', error_code: 'FAILURE' });
+  });
+
   it('workflow_run completed 성공/실패를 정확히 반영하고 실패는 incident를 연다', async () => {
     const h = await createHarness({ now: new Date('2026-11-15T22:30:00Z') });
     const projectId = await setupProject(h);

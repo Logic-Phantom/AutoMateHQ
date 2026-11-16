@@ -58,8 +58,15 @@ export function upsertRunStmt(db: Db, r: RunUpsert, now: Date): DbStatement {
        commit_sha = COALESCE(excluded.commit_sha, runs.commit_sha),
        external_url = COALESCE(excluded.external_url, runs.external_url),
        summary = COALESCE(excluded.summary, runs.summary),
-       error_code = excluded.error_code,
-       safe_error_message = excluded.safe_error_message,
+       -- 완료 상태를 유지하는 경우(같은 회차의 늦은 queued/running, 예: 재실행 대기)에는 오류 정보도 유지한다
+       error_code = CASE
+         WHEN runs.status IN ('success','failure','cancelled','skipped') AND excluded.status IN ('queued','running')
+              AND excluded.run_attempt <= runs.run_attempt THEN runs.error_code
+         ELSE excluded.error_code END,
+       safe_error_message = CASE
+         WHEN runs.status IN ('success','failure','cancelled','skipped') AND excluded.status IN ('queued','running')
+              AND excluded.run_attempt <= runs.run_attempt THEN runs.safe_error_message
+         ELSE excluded.safe_error_message END,
        metrics_json = CASE WHEN excluded.metrics_json = '{}' THEN runs.metrics_json ELSE excluded.metrics_json END,
        updated_at = excluded.updated_at`,
     r.projectId,

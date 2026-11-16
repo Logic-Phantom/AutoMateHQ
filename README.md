@@ -57,8 +57,9 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 |---|---|---|
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | **Routine 결과 회신 허용(사용자 설정)** | AUDIT 호출·점검은 성공(2026-11-16, 기술 블로그 원인 분석까지 정상). 그러나 루틴 클라우드 환경의 네트워크 정책이 `automatehq.dlacoaud96.workers.dev`를 막아(프록시 403) HQ 콜백 실패 → 대시보드에 계속 ‘시작됨’. claude.ai > Code > 환경 설정에서 루틴이 쓰는 환경의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가 필요. 그전까지는 세션 링크에서 결과 확인 |
-| 2-1 | **기술 블로그 실패 job 재실행(사용자 승인)** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). HQ 실행 이력 > 재실행 또는 GitHub에서 “Re-run failed jobs”. 최신 커밋 a26e34b9 미배포 상태 |
-| 3 | StrangeRecords 오케스트레이터 루틴 | claude.ai에 매일 07:00 “StrangeRecords Daily Production Orchestrator” 루틴이 있음. Actions와 별개로 Heartbeat 보고를 붙일지 결정 |
+| 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
+| 2-2 | **운영 배포 필요** | `runs.ts` 수정(재실행 대기 중 실패 run의 오류 코드가 지워지던 문제)은 커밋만 됨. `npm run deploy` 필요 |
+| 3 | StrangeRecords 오케스트레이터 루틴 — **보류(현재 불필요)** | 2026-11-16 확인: 루틴이 07:07에 `daily-shorts.yml`을 `workflow_dispatch`로 실행하고, HQ는 이 실행을 이미 수집·판정한다(이벤트로 거르지 않음). 루틴이 안 돌면 07:00+120분까지 실행이 없어 ‘미실행’으로 잡힌다. Heartbeat가 더해 줄 것은 **게시 결과(YouTube URL·게시 완료)** 정도이고, 루틴 환경이 workers.dev를 막고 있어 2번(허용 도메인)이 먼저다 |
 | 4 | (선택) GitHub Webhook | 저장소별 Webhook 등록하면 10분 폴링 대신 즉시 반영. Secret은 `.secrets/github-webhook-secret.txt` |
 | 5 | (선택) 게시 상태 연동 | 각 YouTube/Instagram 파이프라인에 publication 이벤트 전송(기존 저장소 수정 필요) |
 
@@ -189,7 +190,9 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] DevVibe: 저장소 커밋 감시(`[자동 갱신]`)로 연결 — 09:06 커밋 수집, 상태 ‘정상’(루틴 수정 없음)
 - [x] Claude Routine 첫 AUDIT 호출 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 재호출 세션 생성·점검 완료
 - [ ] Routine 결과 회신 — 루틴 환경 네트워크 정책이 workers.dev 차단(프록시 403). 환경 허용 도메인 추가 필요(사용자)
-- [ ] 기술 블로그 Pages 실패 job 재실행(사용자 승인)
+- [x] 기술 블로그 Pages 실패 job 재실행 요청(2026-11-16 12:44, GitHub 수락)
+- [ ] 블로그 재실행 완료 확인(12:55 기준 대기열)
+- [ ] `runs.ts` 오류 코드 유지 수정 운영 배포
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) 각 YouTube/Instagram 파이프라인 게시 이벤트 연동(기존 저장소 수정 필요 — 별도 작업)
 
@@ -223,3 +226,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 동기화 지연 해결: 스케줄러가 4~5시간에 한 번 깨는데 회당 3개만 동기화해 프로젝트별 갱신이 ~15시간 밀림(오늘 StrangeRecords·팩폭AI·고정비 실행 미반영). `?phase=sync`(동기화만, 판정·알림은 전체 tick에서) 추가, `scheduler.yml`이 동기화 2회 + 전체 tick 1회를 호출하도록 변경(호출마다 별도 Worker 실행이라 무료 한도 유지). 테스트 75개 통과, 운영 배포(버전 `205ee01a`). 밀린 6개 프로젝트는 연결 테스트로 즉시 동기화 → 9개 모두 최신
 - Routine AUDIT(기술 블로그) 결과 확인: Pages deploy 잡의 ID 토큰 시간 초과(일시 오류) → 실패 job 재실행 권장. 루틴 환경이 workers.dev를 막아 HQ 콜백 실패(프록시 403) — 환경 허용 도메인 추가 필요
 - 맥에서 Playwright E2E 3개 통과. 데모 환경 `SCHEDULER_OIDC_REPOSITORY` 빈 값 명시(wrangler 경고 제거)
+- StrangeRecords 오케스트레이터 확인: 루틴이 07:07에 `daily-shorts.yml`을 `workflow_dispatch`로 실행하고 HQ가 이미 수집 중 → Heartbeat는 게시 결과(YouTube 링크) 추적용이며 루틴 환경 허용 도메인 설정 후 검토(보류)
+- 기술 블로그 실패 job을 HQ에서 재실행(GitHub 201 수락, 12:55까지 대기열). 재실행 대기(같은 회차 queued) 동기화 때 실패 run의 `error_code`가 지워지던 문제 수정(`runs.ts`, 테스트 76개 통과) — 운영 배포는 아직
