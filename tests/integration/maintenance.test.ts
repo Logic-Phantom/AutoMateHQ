@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkMaintenancePolicy, judgeCallback, buildRoutinePrompt } from '../../worker/src/services/maintenance/policy';
+import { fireRoutine } from '../../worker/src/services/claude/routine';
+import type { FetchFn } from '../../worker/src/env';
 import { body, createHarness, json, mockFetch } from '../helpers/harness';
 
 const FIRE_URL = 'https://api.anthropic.com/v1/claude_code/routines/trig_01ABCDEFGHJKLMNOP/fire';
@@ -84,6 +86,21 @@ describe('유지보수 실행', () => {
     expect(job.status).toBe('started');
     expect(job.completed_at).toBeNull();
     expect(job.routine_session_url).toBe('https://claude.ai/code/session_01');
+  });
+
+  it('Routine 호출은 Workers가 지원하는 redirect 옵션만 쓰고 3xx는 따라가지 않는다', async () => {
+    let redirectOpt: RequestInit['redirect'];
+    // Workers 런타임처럼 redirect: 'error'면 TypeError를 던지는 fetch
+    const workersLike: FetchFn = async (_url, init) => {
+      redirectOpt = init?.redirect;
+      if (init?.redirect === 'error') throw new TypeError('Invalid redirect value, must be one of "follow" or "manual"');
+      return new Response(null, { status: 302, headers: { Location: 'https://evil.example.com/' } });
+    };
+    const res = await fireRoutine(workersLike, FIRE_URL, ROUTINE_TOKEN, 'hi');
+    expect(redirectOpt).toBe('manual');
+    expect(res.ok).toBe(false);
+    expect(res.errorType).toBe('redirect');
+    expect(res.httpStatus).toBe(302);
   });
 
   it('허용 목록 밖의 Routine URL은 저장하지 않는다(SSRF 방지)', async () => {

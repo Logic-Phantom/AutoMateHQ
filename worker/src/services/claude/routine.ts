@@ -42,10 +42,20 @@ export async function fireRoutine(fetchFn: FetchFn, fireUrl: string, token: stri
       },
       body: JSON.stringify({ text }),
       signal: AbortSignal.timeout(20_000),
-      redirect: 'error',
+      // Workers fetch는 redirect: 'error'를 지원하지 않아 호출 전에 TypeError를 던진다 → manual + 3xx 거부
+      redirect: 'manual',
     });
-  } catch {
-    return { ok: false, httpStatus: null, errorType: 'network_error', message: 'Routine 호출 실패(네트워크)' };
+  } catch (e) {
+    const timeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    return {
+      ok: false,
+      httpStatus: null,
+      errorType: timeout ? 'timeout' : 'network_error',
+      message: timeout ? 'Routine 호출 시간 초과(20초)' : `Routine 호출 실패(네트워크${e instanceof Error ? `: ${e.name}` : ''})`,
+    };
+  }
+  if (res.status >= 300 && res.status < 400) {
+    return { ok: false, httpStatus: res.status, errorType: 'redirect', message: `Routine 호출이 리다이렉트됨(${res.status}) — 따라가지 않음` };
   }
   const body = (await res.json().catch(() => ({}))) as {
     type?: string;

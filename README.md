@@ -12,9 +12,28 @@
 
 ## 다음 세션에서 이어서 하기
 
+### 0. 작업 환경: 집 macOS + 외부 Windows 병행(2026-11-16~)
+
+코드·스크립트는 OS 공통(`scripts/*.mjs`는 `win32`일 때만 `npx.cmd` 사용, `.gitattributes`로 LF 고정). 맥에서 `npm install` 후 typecheck·lint·테스트 71개 통과 확인. 코드는 Git(push/pull)으로만 주고받는다.
+
+운영 비밀 값(GitHub PAT·카카오 토큰·Routine 토큰 등)은 **Cloudflare Secret과 D1(암호화)에 있어서 PC 간에 옮길 필요가 없다.** 기기마다 따로 하는 것:
+
+| 항목 | 기기마다? | 방법 |
+|---|---|---|
+| Wrangler 로그인 | 각자 1회 | `npx wrangler login`(브라우저 OAuth). D1 조회·배포·secret 등록에 필요 |
+| GitHub CLI(선택) | 각자 1회 | `gh auth login`. Actions 수동 실행·로그·PR용 |
+| `.dev.vars.demo` | 자동 생성 | `npm run dev:demo` 첫 실행 시 생성 |
+| `.dev.vars`(운영 모드 로컬 실행 시만) | 각자 | `.dev.vars.example` 참고. 평소엔 필요 없음 |
+| 관리자 비밀번호 | 공유(파일 X) | 암호 관리자에 보관. 대시보드 로그인용 |
+| Webhook secret(선택 작업 때만) | 공유(파일 X) | 암호 관리자에 보관하거나 Webhook 등록 시 새로 생성해 재등록 |
+
+- `.secrets/` 파일 자체를 복사할 필요는 없다. 값은 암호 관리자로 관리하고 메신저·클라우드 공유 폴더에 두지 않는다.
+- secret 등록은 `npx wrangler secret put NAME` 실행 후 프롬프트에 직접 붙여 넣는다. 셸 파이프는 끝에 개행이 붙을 수 있다.
+- (선택) Playwright E2E — `npx playwright install chromium`.
+
 ### 1. 먼저 확인할 것(순서대로)
 
-1. **GitHub 예약 실행이 시작됐는지** — 2026-11-15 18:15 기준 `hq-scheduler`는 수동 실행(`workflow_dispatch`) 2회뿐이고 `schedule` 이벤트 실행이 아직 없었다. 새 워크플로는 GitHub가 예약 실행을 늦게 시작하기도 한다.
+1. **GitHub 예약 실행 간격** — 2026-11-16 확인: `schedule` 실행이 **10분 간격이 아니라 00:45·05:35·09:19 KST 3번뿐**(4~5시간 간격). 그래서 첫 07:00 보고서가 **09:19 KST에 지연 발송**됐다(`sent`, 1회 시도). 따라잡기 창(07:00~12:00) 안에 tick이 하나도 안 들어오는 날은 보고서가 빠진다. → Cloudflare Cron 복구(아래 대안)를 권장.
 
    ```bash
    curl -s "https://api.github.com/repos/Logic-Phantom/AutoMateHQ/actions/workflows/scheduler.yml/runs?per_page=10"
@@ -58,7 +77,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 ### 4. 주의 사항
 
-- **secret 등록은 PowerShell 파이프로 하지 않는다**(값 끝에 CRLF가 붙어 KOE101 발생). 직접 프롬프트에 붙여 넣거나 Node `spawnSync(..., { input: value.trim() })`.
+- **secret 등록은 셸 파이프로 하지 않는다**(Windows PowerShell은 CRLF, macOS `echo`는 LF가 붙어 KOE101 발생 사례). 직접 프롬프트에 붙여 넣거나 Node `spawnSync(..., { input: value.trim() })`.
 - 기존 프로젝트 저장소와 기존 claude.ai 루틴은 사용자 확인 없이 수정하지 않는다.
 - 토큰·시크릿 값은 채팅·로그·README에 남기지 않는다. 브라우저에서 생성된 토큰은 사용자가 직접 복사해 HQ에 입력한다.
 
@@ -155,16 +174,18 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] 카카오 REST API 키·클라이언트 시크릿을 Cloudflare Secret에 등록(`KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET`)
 - [x] 카카오 앱 아이콘 등록(`docs/assets/icon-256.png`, 256px PNG)
 - [x] 대시보드 로그인 → 카카오 로그인 연결 → 테스트 메시지 발송 성공(2026-11-15 17:49 KST, 카카오 응답 `200 / result_code 0`)
-- [ ] 다음 날 07:00~ 정기 보고서 실제 수신 확인
+- [x] 첫 정기 보고서 발송(2026-11-16 09:19 KST, 스케줄러 지연으로 2시간 19분 늦음)
 - [x] GitHub Fine-grained PAT 발급(“AI Automation HQ”, 저장소 8개, Actions 읽기·쓰기 + Metadata 읽기, 2027-02-13 만료) 후 연동 설정에 저장 — Logic-Phantom으로 연결됨
 - [x] 프로젝트 등록(`scripts/seed-presets.mjs` → D1, 대시보드 “기존 저장소에서 추가”와 같은 값): StrangeRecords·FactBokAI·CHIPLY·청약·고정비·TechLog·GitHub 프로필·기술 블로그(Pages)·DevVibe. 점심합의는 감시 제외(이력 보관)
 - [x] GitHub 토큰 저장소 범위 갱신(점심합의 제외, Logic-Phantom·Logic-Phantom.github.io·DevVibe 추가 → 10개)
 - [x] Claude Code Routine “AI Automation HQ 읽기 전용 점검” 생성(API 트리거, 감시 저장소 10개)
 - [x] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit, 표시 이름 “데일리”) — `connected`
-- [ ] GitHub `schedule` 예약 실행 시작 확인(현재 수동 실행 2회뿐)
-- [ ] 나머지 6개 프로젝트 첫 동기화 확인
+- [x] GitHub `schedule` 예약 실행 시작 확인(2026-11-16 00:45·05:35·09:19 KST) — 단, 간격이 4~5시간이라 Cloudflare Cron 복구 검토 필요
+- [ ] 정기 보고서 정시(07:00대) 발송 — 스케줄러 지연 해결 필요
+- [x] 맥 환경: `npx wrangler login` 완료(관리자 비밀번호는 암호 관리자로 공유)
+- [x] 감시 프로젝트 8개 동기화 완료(DevVibe는 Heartbeat 대상이라 제외)
 - [ ] DevVibe: 매일 09:00 루틴이 HQ에 Heartbeat를 보내도록 연결. 연결 전까지 ‘확인 불가’
-- [ ] Claude Routine 첫 AUDIT 호출·결과 회신 검증
+- [ ] Claude Routine 첫 AUDIT 호출·결과 회신 검증 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 12:26 재호출 **세션 생성 성공**. 결과 회신(callback) 도착 확인 남음
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) 각 YouTube/Instagram 파이프라인 게시 이벤트 연동(기존 저장소 수정 필요 — 별도 작업)
 
@@ -185,3 +206,11 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 점심합의 감시 제외, GitHub 프로필·기술 블로그·DevVibe 추가(DevVibe는 Anthropic 클라우드 루틴 → Heartbeat 감시), 토큰 저장소 범위 갱신
 - claude.ai에 HQ용 읽기 전용 점검 Routine(API 트리거, 저장소 10개) 생성 → 사용자가 HQ에 등록, `connected` 확인
 - 마감 시점 상태: 연동 3종 connected, 프로젝트 9개(동기화 완료 3·대기 6), 수집된 실행 45건, 카카오 테스트 메시지 1건 발송. GitHub 예약 실행은 아직 시작 전(수동 2회)
+
+### 2026-11-16
+- 맥(집)·윈도우(외부) 병행 환경 구성: 맥에서 `npm install`, typecheck·lint·테스트 71개 통과(코드 변경 없음). Wrangler 로그인은 사용자 작업으로 남김
+- 맥에서 Wrangler 로그인 완료
+- GitHub `schedule` 실행 확인: 00:45·05:35·09:19 KST(4~5시간 간격) → 첫 정기 보고서 09:19 KST 지연 발송(`sent`). Cloudflare Cron 복구 검토
+- 동기화 8개 완료. 기술 블로그(Logic-Phantom.github.io) 2026-11-16 03:02 KST `pages build and deployment` 실패 — build 성공, Deploy to GitHub Pages 단계만 실패(사이트는 200 응답). 일시 오류로 보이며 다음 실행 또는 HQ 재실행으로 확인
+- Claude Routine 첫 AUDIT(기술 블로그) 실패 원인 확인: `routine.ts`의 `redirect: 'error'`가 Workers 런타임에서 TypeError(로컬 workerd로 재현). `redirect: 'manual'` + 3xx 거부 + 시간 초과 구분으로 수정, 테스트 1개 추가(72개 통과)
+- 수정본 운영 배포(버전 `31fcd183`) → AUDIT 재실행 시 Routine 세션 생성 성공(`시작됨`)
