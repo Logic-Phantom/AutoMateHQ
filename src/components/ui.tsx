@@ -26,7 +26,7 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-label font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50',
         styles[variant],
         className,
       )}
@@ -48,7 +48,7 @@ export const STATUS_META: Record<Status, { label: string; cls: string; Icon: typ
 export function StatusBadge({ status }: { status: string }) {
   const meta = STATUS_META[(status as Status) in STATUS_META ? (status as Status) : 'UNKNOWN'];
   return (
-    <span className={cx('inline-flex items-center gap-1 text-[13px] font-medium whitespace-nowrap', meta.cls)}>
+    <span className={cx('inline-flex items-center gap-1 text-label font-medium whitespace-nowrap', meta.cls)}>
       <meta.Icon className="size-3.5" aria-hidden />
       {meta.label}
     </span>
@@ -94,7 +94,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-[22px] font-semibold text-ink">{title}</h1>
+        <h1 className="text-title font-semibold text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -107,7 +107,7 @@ export function Panel({ title, actions, children, className }: { title?: ReactNo
     <section className={cx('min-w-0 rounded-lg border border-line bg-surface', className)}>
       {(title || actions) && (
         <header className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-2">
-          <h2 className="text-[13px] font-semibold whitespace-nowrap text-ink">{title}</h2>
+          <h2 className="text-label font-semibold whitespace-nowrap text-ink">{title}</h2>
           {actions}
         </header>
       )}
@@ -125,10 +125,14 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
-export function Loading({ label = '불러오는 중…' }: { label?: string }) {
+/** 내용 자리에 스피너 대신 회색 줄(skeleton)을 둔다. 화면이 로드 후 덜 출렁이고, 무엇이 올지 미리 보인다. */
+export function Loading({ label = '불러오는 중…', rows = 3 }: { label?: string; rows?: number }) {
   return (
-    <div role="status" className="flex items-center gap-2 py-8 text-sm text-ink-mute">
-      <Loader2 className="size-4 animate-spin" aria-hidden /> {label}
+    <div role="status" aria-live="polite" className="space-y-2.5 py-3">
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} aria-hidden className="h-3.5 animate-pulse rounded-sm bg-sunken" style={{ width: `${[92, 76, 84, 64][i % 4]}%` }} />
+      ))}
     </div>
   );
 }
@@ -204,7 +208,7 @@ export function Modal({
       aria-labelledby={titleId}
       onClose={onClose}
       onCancel={onClose}
-      className="m-auto w-[min(92vw,560px)] rounded-lg border border-line bg-surface p-0 text-ink shadow-[0_8px_30px_rgba(28,27,25,0.12)] backdrop:bg-[#1c1b19]/30"
+      className="m-auto w-[min(92vw,560px)] rounded-lg border border-line bg-surface p-0 text-ink shadow-overlay backdrop:bg-scrim"
     >
       <div className="border-b border-line px-5 py-3">
         <h2 id={titleId} className="text-base font-semibold">
@@ -233,7 +237,7 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
 }
 
 export const inputCls =
-  'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm placeholder:text-ink-mute focus:border-brand focus:outline-none';
+  'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm placeholder:text-ink-mute focus:border-brand disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-mute aria-[invalid=true]:border-fail';
 
 export function SampleBanner() {
   return (

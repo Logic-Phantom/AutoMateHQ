@@ -172,7 +172,7 @@ export function ProjectDetailPage() {
 
       <Panel title="최근 실행" className="mt-4">
         {runs.length === 0 ? (
-          <EmptyState title="실행 기록이 없습니다." />
+          <EmptyState title="실행 기록이 없습니다.">위의 연결 테스트로 바로 동기화하거나, 감시 방식·워크플로 파일 설정을 확인하세요.</EmptyState>
         ) : (
           <Table head={['시작', '소스', '워크플로/단계', '상태', '오류', '원본']}>
             {runs.map((r) => (

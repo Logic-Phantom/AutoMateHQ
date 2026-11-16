@@ -19,11 +19,11 @@ const short = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}
 
 function StatTile({ label, value, sub, trend, trendLabel, trendColor }: { label: string; value: number; sub?: string; trend?: number[]; trendLabel?: string; trendColor?: string }) {
   return (
-    <div className="flex items-end justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3.5">
-      <div>
-        <p className="text-[13px] font-medium text-ink-mute">{label}</p>
-        <p className="mt-1 text-[28px] leading-none font-semibold text-ink">{value.toLocaleString('ko-KR')}</p>
-        {sub && <p className="mt-1.5 text-xs text-ink-mute">{sub}</p>}
+    <div className="flex flex-col justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3.5 sm:flex-row sm:items-end">
+      <div className="min-w-0">
+        <p className="text-label font-medium whitespace-nowrap text-ink-mute">{label}</p>
+        <p className="tabular mt-1 text-metric font-semibold text-ink">{value.toLocaleString('ko-KR')}</p>
+        {sub && <p className="mt-1.5 text-xs whitespace-nowrap text-ink-mute">{sub}</p>}
       </div>
       {trend && <Sparkline values={trend} label={trendLabel ?? label} color={trendColor} />}
     </div>
@@ -67,13 +67,13 @@ export function OverviewPage() {
       />
 
       {/* 1행: 상태 분포 + 실행 통계 */}
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
-        <section className="rounded-lg border border-line bg-surface px-4 py-3.5" aria-label="프로젝트 상태 분포">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <section className="col-span-2 rounded-lg lg:col-span-1 border border-line bg-surface px-4 py-3.5" aria-label="프로젝트 상태 분포">
           <div className="flex items-baseline justify-between">
-            <p className="text-[13px] font-medium text-ink-mute">활성 프로젝트</p>
+            <p className="text-label font-medium text-ink-mute">활성 프로젝트</p>
             <Link to="/projects" className="text-xs text-brand-ink hover:underline">관리</Link>
           </div>
-          <p className="mt-1 text-[28px] leading-none font-semibold">{d.kpi.activeProjects}</p>
+          <p className="tabular mt-1 text-metric font-semibold">{d.kpi.activeProjects}</p>
           <div className="mt-3">
             <SegmentedBar parts={statusParts} label="프로젝트 상태 분포" height={10} />
           </div>
@@ -92,7 +92,7 @@ export function OverviewPage() {
           {stats.isLoading ? (
             <Loading />
           ) : total14 === 0 ? (
-            <EmptyState title="최근 14일 실행 기록이 없습니다." />
+            <EmptyState title="최근 14일 실행 기록이 없습니다.">프로젝트를 등록하고 GitHub 토큰을 연결하면 다음 동기화부터 일별 결과가 쌓입니다.</EmptyState>
           ) : (
             <div className="h-56" role="img" aria-label={`최근 14일 일별 실행 결과. ${daily.map((x) => `${short(x.date)} 성공 ${x.success} 실패 ${x.failure}`).join(', ')}`}>
               <ResponsiveContainer width="100%" height="100%">
@@ -101,7 +101,7 @@ export function OverviewPage() {
                   <XAxis dataKey="date" tickFormatter={short} tickLine={false} axisLine={{ stroke: CHART.axis }} tick={{ fill: CHART.inkMute, fontSize: 11 }} interval="preserveStartEnd" minTickGap={12} />
                   <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: CHART.inkMute, fontSize: 11 }} width={40} />
                   <Tooltip
-                    cursor={{ fill: 'rgba(28,27,25,0.04)' }}
+                    cursor={{ fill: CHART.hoverWash }}
                     content={({ active, payload, label }) => (
                       <ChartTooltip
                         active={active}
@@ -112,7 +112,7 @@ export function OverviewPage() {
                   />
                   <Bar dataKey="success" name="성공" stackId="r" fill={CHART.good} maxBarSize={24} isAnimationActive={false} stroke={CHART.surface} strokeWidth={1} />
                   <Bar dataKey="failure" name="실패" stackId="r" fill={CHART.critical} maxBarSize={24} isAnimationActive={false} stroke={CHART.surface} strokeWidth={1} />
-                  <Bar dataKey="other" name="기타" stackId="r" fill={CHART.neutral} maxBarSize={24} radius={[4, 4, 0, 0]} stroke={CHART.surface} strokeWidth={1} />
+                  <Bar dataKey="other" name="기타" stackId="r" fill={CHART.neutral} maxBarSize={24} isAnimationActive={false} radius={[4, 4, 0, 0]} stroke={CHART.surface} strokeWidth={1} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -166,7 +166,7 @@ export function OverviewPage() {
                   <p className="truncate text-xs text-ink-mute">{CATEGORY_LABEL[p.category as ProjectCategory] ?? p.category} · 다음 {fmtDateTime(p.nextExpectedAt)}</p>
                 </div>
                 <StatusBadge status={p.status} />
-                <p className="min-w-0 truncate text-[13px] text-ink-soft" title={p.reason ?? ''}>{p.reason ?? '-'}</p>
+                <p className="min-w-0 truncate text-label text-ink-soft" title={p.reason ?? ''}>{p.reason ?? '-'}</p>
                 <div className="flex items-center gap-3">
                   {strips.get(p.id) && <RunStrip cells={strips.get(p.id)!} name={p.name} />}
                   <span className="tabular w-14 text-right text-xs text-ink-mute">{fmtRelative(p.lastRunAt)}</span>

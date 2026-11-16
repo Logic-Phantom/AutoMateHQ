@@ -81,7 +81,7 @@ export function NotificationsPage() {
               </dl>
               {s!.lastErrorMessage && <Notice tone="fail">{s!.lastErrorMessage}</Notice>}
               <div className="flex flex-wrap gap-2">
-                <a href="/api/integrations/kakao/connect" className="inline-flex items-center rounded-md border border-transparent bg-[#FEE500] px-3 py-1.5 text-sm font-medium text-black hover:brightness-95">
+                <a href="/api/integrations/kakao/connect" className="inline-flex items-center rounded-md border border-transparent bg-kakao px-3 py-1.5 text-sm font-medium text-kakao-ink transition-[filter] hover:brightness-95 active:brightness-90">
                   {s!.status === 'connected' ? '카카오 다시 연결' : '카카오 로그인 연결'}
                 </a>
                 <Button onClick={() => test.mutate()} loading={test.isPending} disabled={s!.status !== 'connected'}>테스트 메시지 보내기</Button>
@@ -127,9 +127,9 @@ export function NotificationsPage() {
               {preview.data && (
                 <div className="space-y-2">
                   {preview.data.messages.map((m, i) => (
-                    <div key={i} className="rounded-md bg-[#FEF9C3] p-3 text-xs whitespace-pre-wrap text-black">
+                    <div key={i} className="rounded-md bg-kakao-bubble p-3 text-xs whitespace-pre-wrap text-kakao-ink">
                       {m}
-                      <div className="tabular mt-1 text-right text-[10px] text-black/50">{preview.data!.lengths[i]}/200자</div>
+                      <div className="tabular mt-1 text-right text-xs text-kakao-ink/60">{preview.data!.lengths[i]}/200자</div>
                     </div>
                   ))}
                 </div>
@@ -143,7 +143,7 @@ export function NotificationsPage() {
 
       <Panel title="발송 이력" className="mt-4">
         {!history.data?.history.length ? (
-          <EmptyState title="발송 이력이 없습니다." />
+          <EmptyState title="발송 이력이 없습니다.">카카오를 연결한 뒤 테스트 메시지를 보내거나 정기 보고서가 발송되면 여기에 기록됩니다.</EmptyState>
         ) : (
           <Table head={['시각', '유형', '상태', '내용', '응답', '오류']}>
             {history.data.history.map((h) => (

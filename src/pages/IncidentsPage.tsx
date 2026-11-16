@@ -57,7 +57,7 @@ export function IncidentsPage() {
         ) : incidents.error ? (
           <ErrorBox message={errorMessage(incidents.error)} />
         ) : !incidents.data?.length ? (
-          <EmptyState title="해당하는 장애가 없습니다." />
+          <EmptyState title="해당하는 장애가 없습니다.">실패·미실행이 감지되면 자동으로 열리고, 다음 성공 실행에서 자동으로 닫힙니다.</EmptyState>
         ) : (
           <Table head={['심각도', '장애', '프로젝트', '최초/최근', '반복', '상태', '조치']}>
             {incidents.data.map((i) => (

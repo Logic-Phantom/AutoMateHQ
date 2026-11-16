@@ -12,7 +12,7 @@ export function RunDurationChart({ runs }: { runs: RunRow[] }) {
     .slice()
     .reverse()
     .map((r) => ({ t: r.startedAt!, minutes: Math.round(((r.durationSeconds ?? 0) / 60) * 10) / 10, status: r.status, seconds: r.durationSeconds ?? 0 }));
-  if (data.length < 2) return <EmptyState title="소요 시간을 그릴 완료된 실행이 부족합니다." />;
+  if (data.length < 2) return <EmptyState title="소요 시간을 그릴 완료된 실행이 부족합니다.">완료된 실행이 2회 이상 쌓이면 추이가 표시됩니다.</EmptyState>;
   return (
     <div>
       <div className="h-48" role="img" aria-label={`최근 실행 ${data.length}회의 소요 시간(분) 추이`}>

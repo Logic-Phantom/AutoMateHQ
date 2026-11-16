@@ -159,14 +159,14 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 | Mock 모드 | 같은 DB에 섞일 위험 | 별도 D1 DB(`automatehq-demo`) + `[샘플]` 표기 + 외부 호출 차단 + 원격 시드 거부 |
 | 게시 상태 | Actions 성공 = 게시 성공으로 오해 | run과 publication 분리, 확인 출처(보고/검증) 표시 |
 | Webhook 서명 실패 기록 | 공격자가 delivery ID를 선점해 정상 이벤트를 “중복” 처리시킬 수 있음 | 서명 실패는 별도 provider 키로 기록 |
-| 디자인 | – | taste-skill 원칙 중 대시보드에 맞는 것(따뜻한 near-black·단일 파랑 강조·sharp 반경·헤어라인·절제된 모션·보라 금지)과 dataviz 검증 팔레트 적용 |
+| 디자인 | – | taste-skill 원칙 중 대시보드에 맞는 것(따뜻한 near-black·단일 파랑 강조·sharp 반경·헤어라인·절제된 모션·보라 금지)과 dataviz 검증 팔레트 적용. 2026-11-16 Impeccable·Hallmark 기준으로 재점검(토큰 외 색 금지·skeleton 로딩·포커스 링·이모지 아이콘 제거·빈 상태 안내) |
 
-## 테스트 결과(2026-11-15 로컬)
+## 테스트 결과(2026-11-16 맥 로컬)
 
 - `npm run typecheck` 통과 · `npm run lint` 통과
-- `npm test`: **71개 통과**(판정 14 · GitHub 9 · Heartbeat 7 · 카카오 10 · 유지보수 9 · 보안 13 · 스케줄러 OIDC 4 · 컴포넌트 5)
+- `npm test`: **79개 통과**(컴포넌트 7 포함)
 - `npm run test:e2e`: **3개 통과**(로그인·대시보드 차트, 재실행 확인 모달, 카카오 보고서 미리보기 200자)
-- `vite build` 성공, `wrangler deploy --dry-run` 번들 성공(gzip 약 184 KiB)
+- `vite build` 성공(2026-11-16). `wrangler deploy --dry-run` 번들 성공(2026-11-15, gzip 약 184 KiB)
 
 ## 진행 체크리스트
 
@@ -229,3 +229,14 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - StrangeRecords 오케스트레이터 확인: 루틴이 07:07에 `daily-shorts.yml`을 `workflow_dispatch`로 실행하고 HQ가 이미 수집 중 → Heartbeat는 게시 결과(YouTube 링크) 추적용이며 루틴 환경 허용 도메인 설정 후 검토(보류)
 - claude.ai 루틴 환경 `Default` 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(이전: 허용 도메인 없음). StrangeRecords Heartbeat 검토의 선행 조건 해소
 - 기술 블로그 실패 job을 HQ에서 재실행(GitHub 201 수락, 12:55까지 대기열). 재실행 대기(같은 회차 queued) 동기화 때 실패 run의 `error_code`가 지워지던 문제 수정(`runs.ts`, 테스트 76개 통과) — 운영 배포 완료(버전 50cee018)
+- **대시보드 디자인 점검(Impeccable·Hallmark 기준)** — 두 오픈소스 디자인 스킬([pbakaus/impeccable](https://github.com/pbakaus/impeccable) Apache-2.0, [Nutlope/hallmark](https://github.com/Nutlope/hallmark) MIT)의 공개 규칙을 읽고 대시보드에 맞는 항목만 적용. 스킬 설치·외부 코드 실행 없음. 화면 구조·라우트·API·컴포넌트 이름은 그대로
+  - 색은 토큰만: `charts.tsx`의 차트 색 상수(hex 12개)를 `var(--color-*)` 참조로 바꿔 색을 `index.css` 한 곳에서만 관리. 모달 배경·그림자·차트 hover·카카오 버튼/말풍선 색도 토큰(`--color-scrim` `--shadow-overlay` `--shadow-pop` `--color-hover-wash` `--color-kakao*`)으로 이동. SVG에서 변수 색이 실제 색으로 계산되는 것을 브라우저에서 확인
+  - 글자 크기 단계 고정: 임의 값 `text-[13px]`·`[22px]`·`[28px]`·`[10px]`을 `text-label`(13)·`text-title`(22)·`text-metric`(28)·`text-xs`(12) 토큰으로 통일. 카카오 미리보기 글자수 표시 10px → 12px
+  - 로딩: 내용 자리 스피너 → skeleton 줄(`Loading` 컴포넌트 1곳 수정으로 17개 화면 적용, 화면 낭독용 라벨 유지, 동작 줄이기 설정 시 애니메이션 없음)
+  - 포커스: 입력칸의 `focus:outline-none` 때문에 키보드 포커스 링이 사라지던 문제 수정(2px 파랑 링). 입력칸 비활성·오류(`aria-invalid`) 상태 스타일 추가
+  - 이모지 아이콘 제거: 보고서 화면 제목의 🔴🟡⚪🟢🧠🧭를 상태 배지와 같은 선 아이콘·색으로 교체. 보고서 이력의 원문 상태값(`sent` 등)을 한글 라벨로 표시. **카카오 메시지 본문의 이모지는 그대로**(메시지 형식 변경 없음)
+  - 빈 상태 안내: 제목만 있던 빈 상태 7곳에 다음 행동 안내 추가(실행 이력·장애·발송 이력·소요 시간·사용량·14일 차트·프로젝트 실행 기록)
+  - 숫자: KPI 큰 숫자에 고정폭 숫자(tabular) 적용, 14일 차트의 ‘기타’ 막대만 남아 있던 로드 애니메이션 제거
+  - 모바일: 24시간 실행·실패 카드를 두 칸으로 놓아 첫 화면 세로 길이를 줄이고(‘프로젝트별 상태’가 덜 밀림), 좁은 칸에서 라벨이 글자 단위로 줄바꿈되지 않게 세로 배치. `html, body`에 `overflow-x: clip`(sticky 사이드바 유지). 메뉴·로그아웃 hover 색을 내비게이션과 통일
+  - 검증: typecheck·lint 통과, `npm test` 79개 통과(skeleton·차트 토큰 테스트 2개 추가), E2E 3개 통과, `vite build` 성공. 샘플 모드에서 데스크톱(1440)·모바일(375) 화면 확인(가로 스크롤 없음). 보고서 화면 확인을 위해 **로컬 데모 DB**에 오늘 보고서 1건 생성(샘플 모드라 미발송)
+  - 미실행: **운영 배포는 하지 않음**(`npm run deploy` 필요). Prettier 경고 23개 파일은 이번 수정 전부터 있던 것으로 손대지 않음

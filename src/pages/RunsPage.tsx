@@ -60,7 +60,7 @@ export function RunsPage() {
         ) : runs.error ? (
           <ErrorBox message={errorMessage(runs.error)} onRetry={() => void runs.refetch()} />
         ) : !runs.data?.length ? (
-          <EmptyState title="조건에 맞는 실행 기록이 없습니다." />
+          <EmptyState title="조건에 맞는 실행 기록이 없습니다.">필터를 줄이거나 기간을 넓혀 보세요.</EmptyState>
         ) : (
           <Table head={['시작', '프로젝트', '워크플로/단계', '상태', '소요', '오류', '링크', '']}>
             {runs.data.map((r) => (

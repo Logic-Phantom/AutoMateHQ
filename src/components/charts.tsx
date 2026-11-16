@@ -7,19 +7,21 @@ import { cx } from './ui';
  * - 텍스트는 시리즈 색을 입지 않는다(잉크 토큰만).
  * - 막대 끝 4px 라운드, 선 2px, 마커 8px + 2px 표면 링, 그리드는 1px 실선 헤어라인.
  */
+// 값은 styles/index.css의 토큰만 참조한다(색을 두 곳에서 관리하지 않는다). SVG fill/stroke도 CSS 변수를 받는다.
 export const CHART = {
-  surface: '#fdfdfc',
-  grid: '#e3e2dc',
-  axis: '#c9c8c0',
-  ink: '#1c1b19',
-  inkSoft: '#52514e',
-  inkMute: '#706e68',
-  series1: '#2a78d6',
-  series1Wash: 'rgba(42,120,214,0.10)',
-  good: '#0ca30c',
-  critical: '#d03b3b',
-  warning: '#fab219',
-  neutral: '#c9c8c0',
+  surface: 'var(--color-surface)',
+  grid: 'var(--color-line)',
+  axis: 'var(--color-line-strong)',
+  ink: 'var(--color-ink)',
+  inkSoft: 'var(--color-ink-soft)',
+  inkMute: 'var(--color-ink-mute)',
+  series1: 'var(--color-brand)',
+  series1Wash: 'var(--color-series1-wash)',
+  good: 'var(--color-ok)',
+  critical: 'var(--color-fail)',
+  warning: 'var(--color-warn)',
+  neutral: 'var(--color-line-strong)',
+  hoverWash: 'var(--color-hover-wash)',
 };
 
 export const STATUS_COLOR: Record<string, string> = {
@@ -124,7 +126,7 @@ export function ChartTooltip({
 }) {
   if (!active) return null;
   return (
-    <div className="rounded-md border border-line bg-surface px-3 py-2 text-xs shadow-[0_4px_16px_rgba(28,27,25,0.10)]">
+    <div className="rounded-md border border-line bg-surface px-3 py-2 text-xs shadow-pop">
       {label !== undefined && <p className="mb-1 font-medium text-ink">{label}</p>}
       <ul className="space-y-0.5">
         {rows.map((r) => (

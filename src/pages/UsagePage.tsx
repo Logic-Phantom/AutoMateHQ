@@ -73,7 +73,7 @@ export function UsagePage() {
         <div className="space-y-4">
           <Panel title="GitHub Actions 실행 시간(벽시계 기준, 과금 분 아님)">
             {!summary.data!.githubActions.length ? (
-              <EmptyState title="기간 내 GitHub Actions 실행이 없습니다." />
+              <EmptyState title="기간 내 GitHub Actions 실행이 없습니다.">기간을 넓히거나, 실행 이력 화면에서 동기화가 되고 있는지 확인하세요.</EmptyState>
             ) : (
               <>
               <div className="mb-4" style={{ height: Math.max(120, summary.data!.githubActions.length * 34 + 24) }} role="img" aria-label="프로젝트별 GitHub Actions 실행 시간(분)">
@@ -87,7 +87,7 @@ export function UsagePage() {
                     <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: CHART.inkMute, fontSize: 11 }} unit="분" />
                     <YAxis type="category" dataKey="name" width={150} tickLine={false} axisLine={{ stroke: CHART.axis }} tick={{ fill: CHART.inkSoft, fontSize: 12 }} />
                     <Tooltip
-                      cursor={{ fill: 'rgba(28,27,25,0.04)' }}
+                      cursor={{ fill: CHART.hoverWash }}
                       content={({ active, payload }) => {
                         const p = payload?.[0]?.payload as { name: string; minutes: number; runs: number } | undefined;
                         return <ChartTooltip active={active && Boolean(p)} label={p?.name} rows={p ? [{ name: '실행 시간', value: `${p.minutes}분`, color: CHART.series1 }, { name: '실행 횟수', value: `${p.runs}회`, color: CHART.axis }] : []} />;
