@@ -131,7 +131,7 @@ export function publicRoutes(deps: AppDeps) {
       await audit(c.env.DB, now, 'anonymous', 'scheduler.tick_rejected', 'scheduler', null, { reason: err instanceof OidcError ? err.message : 'error' });
       throw new AppError(401, 'UNAUTHORIZED', '스케줄러 인증 실패');
     }
-    const summary = await runScheduledTick(c.env, deps, now.getTime());
+    const summary = await runScheduledTick(c.env, deps, now.getTime(), { syncOnly: c.req.query('phase') === 'sync' });
     return ok(c, summary);
   });
 

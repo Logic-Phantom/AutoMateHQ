@@ -1,3 +1,4 @@
+import { DAILY_REPORT_TIME_LABEL } from '@shared/constants';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { errorMessage, get } from '@/lib/api';
@@ -43,7 +44,7 @@ export function ReportPage() {
     <>
       <PageHeader title={`운영 보고서 ${date}`} description="카카오톡으로 보낸 요약의 전체 내용입니다." />
       {!r ? (
-        <EmptyState title="이 날짜의 보고서가 없습니다.">알림 화면에서 미리보기를 하거나 07:00 이후 다시 확인하세요.</EmptyState>
+        <EmptyState title="이 날짜의 보고서가 없습니다.">알림 화면에서 미리보기를 하거나 {DAILY_REPORT_TIME_LABEL} 이후 다시 확인하세요.</EmptyState>
       ) : (
         <div className="space-y-4">
           {r.report.isSample && <Notice tone="warn">샘플 데이터로 생성된 보고서입니다.</Notice>}

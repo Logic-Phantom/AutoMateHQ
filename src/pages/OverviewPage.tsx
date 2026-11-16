@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { ArrowUpRight, RefreshCw } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CATEGORY_LABEL, INTEGRATION_STATUS_LABEL, RUN_STATUS_LABEL, SEVERITY_LABEL, type ProjectCategory, type RunStatus } from '@shared/constants';
+import { CATEGORY_LABEL, DAILY_REPORT_TIME_LABEL, INTEGRATION_STATUS_LABEL, RUN_STATUS_LABEL, SEVERITY_LABEL, type ProjectCategory, type RunStatus } from '@shared/constants';
 import { get, errorMessage } from '@/lib/api';
 import { fmtDateTime, fmtRelative } from '@/lib/format';
 import type { OverviewDto, RunRow } from '@/types/api';
@@ -120,7 +120,7 @@ export function OverviewPage() {
         </Panel>
 
         <div className="space-y-3">
-          <Panel title="오늘 07:00 카카오 보고서" actions={<Link to="/notifications" className="text-xs text-brand-ink hover:underline">설정</Link>}>
+          <Panel title={`오늘 ${DAILY_REPORT_TIME_LABEL} 카카오 보고서`} actions={<Link to="/notifications" className="text-xs text-brand-ink hover:underline">설정</Link>}>
             {d.todayReport ? (
               <div className="space-y-1.5 text-sm">
                 <Badge tone={d.todayReport.status === 'sent' ? 'ok' : d.todayReport.status === 'failed' ? 'fail' : 'neutral'}>
@@ -131,7 +131,7 @@ export function OverviewPage() {
                 <Link to={`/reports/${d.todayReport.reportDate}`} className="inline-flex items-center gap-0.5 text-xs text-brand-ink hover:underline">보고서 보기 <ArrowUpRight className="size-3" /></Link>
               </div>
             ) : (
-              <p className="text-sm text-ink-soft">아직 오늘 보고서가 없습니다. 07:00 이후 자동 발송됩니다.</p>
+              <p className="text-sm text-ink-soft">아직 오늘 보고서가 없습니다. {DAILY_REPORT_TIME_LABEL} 이후 자동 발송됩니다.</p>
             )}
           </Panel>
           <Panel title="연결 상태">

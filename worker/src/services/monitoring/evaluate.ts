@@ -95,7 +95,7 @@ export async function evaluateAll(db: Db, now: Date, opts: { persist: boolean } 
         id: p.id,
         isActive: bool(p.is_active),
         monitoringMode: p.monitoring_mode,
-        hasGithubSource: srcs.some((s) => s.source_type === 'github_actions'),
+        hasGithubSource: srcs.some((s) => s.source_type === 'github_actions' || s.source_type === 'github_commits'),
         hasHeartbeatSource: srcs.some((s) => s.source_type === 'heartbeat'),
         createdAt: p.created_at,
         schedule: {

@@ -1,3 +1,4 @@
+import { DAILY_REPORT_TIME_LABEL } from '../../../../shared/constants';
 import type { AppDeps, Env } from '../../env';
 import { all, run, type Db } from '../../lib/db';
 import { acquireLock, releaseLock } from '../../repositories/common';
@@ -191,7 +192,7 @@ async function markReauth(env: Env, db: Db, code: string, now: Date) {
       fingerprint: 'integration:kakao:REAUTH',
       severity: 'high',
       category: 'INTEGRATION_AUTH',
-      title: '카카오 재연결 필요 — 07:00 보고서를 보낼 수 없습니다',
+      title: `카카오 재연결 필요 — ${DAILY_REPORT_TIME_LABEL} 정기 보고서를 보낼 수 없습니다`,
       description: `오류 코드: ${code}`,
     },
     now,

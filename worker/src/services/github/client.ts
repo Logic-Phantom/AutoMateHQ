@@ -62,6 +62,16 @@ export interface WorkflowRunApi {
   workflow_id: number;
 }
 
+export interface CommitApi {
+  sha: string;
+  html_url: string;
+  commit: {
+    message: string;
+    author: { name: string; date: string } | null;
+    committer: { name: string; date: string } | null;
+  };
+}
+
 export interface WorkflowApi {
   id: number;
   name: string;
@@ -124,6 +134,14 @@ export class GithubClient {
       ? `/repos/${enc(owner)}/${enc(repo)}/actions/workflows/${enc(opts.workflowFile)}/runs`
       : `/repos/${enc(owner)}/${enc(repo)}/actions/runs`;
     return (await this.request<{ workflow_runs: WorkflowRunApi[] }>('GET', `${base}?${qs}`)).data.workflow_runs;
+  }
+
+  /** 브랜치의 최근 커밋(최신순). since는 ISO 시각. */
+  async listCommits(owner: string, repo: string, opts: { branch?: string | null; since?: string; perPage?: number } = {}) {
+    const qs = new URLSearchParams({ per_page: String(opts.perPage ?? 30) });
+    if (opts.branch) qs.set('sha', opts.branch);
+    if (opts.since) qs.set('since', opts.since);
+    return (await this.request<CommitApi[]>('GET', `/repos/${enc(owner)}/${enc(repo)}/commits?${qs}`)).data;
   }
 
   async getRun(owner: string, repo: string, runId: number | string) {

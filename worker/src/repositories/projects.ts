@@ -44,6 +44,7 @@ export interface SourceRow {
 
 export function toProjectDto(p: ProjectRow, sources: SourceRow[] = []) {
   const gh = sources.find((s) => s.source_type === 'github_actions');
+  const commits = sources.find((s) => s.source_type === 'github_commits' && bool(s.is_enabled));
   const ghConfig = gh ? (JSON.parse(gh.config_json || '{}') as { event?: string }) : {};
   return {
     id: p.id,
@@ -69,6 +70,7 @@ export function toProjectDto(p: ProjectRow, sources: SourceRow[] = []) {
     isActive: bool(p.is_active),
     workflowFile: gh?.external_identifier && gh.external_identifier !== '*' ? gh.external_identifier : null,
     workflowEvent: ghConfig.event === 'schedule' ? 'schedule' : 'any',
+    commitFilter: commits && commits.external_identifier !== '*' ? commits.external_identifier : null,
     hasHeartbeat: sources.some((s) => s.source_type === 'heartbeat' && bool(s.is_enabled)),
     lastSyncedAt: p.last_synced_at,
     lastSyncErrorCode: p.last_sync_error_code,
@@ -157,10 +159,13 @@ export async function updateProject(db: Db, id: number, input: ProjectInput, now
   await syncSources(db, id, input, now);
 }
 
-/** 프로젝트 설정에서 GitHub Actions 소스를 만들고/끈다. heartbeat 소스는 secret 발급 시 만든다. */
+/** 프로젝트 설정에서 GitHub Actions/커밋 소스를 만들고/끈다. heartbeat 소스는 secret 발급 시 만든다. */
 async function syncSources(db: Db, projectId: number, input: ProjectInput, now: Date) {
   const iso = now.toISOString();
-  const wantsGithub = Boolean(input.repoOwner && input.repoName) && input.monitoringMode.startsWith('github');
+  const hasRepo = Boolean(input.repoOwner && input.repoName);
+  const wantsGithub = hasRepo && (input.monitoringMode === 'github_actions' || input.monitoringMode === 'github_webhook');
+  const wantsCommits = hasRepo && input.monitoringMode === 'github_commits';
+  const commitId = input.commitFilter?.trim() || '*';
   const identifier = input.workflowFile ?? '*';
   await db.batch([
     stmt(
@@ -194,6 +199,30 @@ async function syncSources(db: Db, projectId: number, input: ProjectInput, now: 
             projectId,
           ),
         ]),
+    // 커밋 감시 소스: 모드가 아니거나 필터가 바뀌면 기존 것을 끈다
+    stmt(
+      db,
+      `UPDATE project_sources SET is_enabled = 0, updated_at = ? WHERE project_id = ? AND source_type = 'github_commits'
+         AND (? = 0 OR external_identifier != ?)`,
+      iso,
+      projectId,
+      wantsCommits ? 1 : 0,
+      commitId,
+    ),
+    ...(wantsCommits
+      ? [
+          stmt(
+            db,
+            `INSERT INTO project_sources (project_id, source_type, external_identifier, config_json, is_enabled, created_at, updated_at)
+             VALUES (?, 'github_commits', ?, '{}', 1, ?, ?)
+             ON CONFLICT(project_id, source_type, external_identifier) DO UPDATE SET is_enabled = 1, updated_at = excluded.updated_at`,
+            projectId,
+            commitId,
+            iso,
+            iso,
+          ),
+        ]
+      : []),
   ]);
 }
 
@@ -222,5 +251,6 @@ export function projectToInput(p: ProjectRow, sources: SourceRow[]): ProjectInpu
     isActive: dto.isActive,
     workflowFile: dto.workflowFile,
     workflowEvent: dto.workflowEvent as ProjectInput['workflowEvent'],
+    commitFilter: dto.commitFilter,
   };
 }

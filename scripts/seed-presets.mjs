@@ -31,6 +31,7 @@ for (const b of blocks) {
     branch: field(b, 'defaultBranch') ?? 'main',
     mode: field(b, 'monitoringMode') ?? 'github_actions',
     wf: field(b, 'workflowFile') ?? '*',
+    commitFilter: field(b, 'commitFilter') ?? '*',
     event: field(b, 'workflowEvent') ?? 'any',
     cadence: field(b, 'expectedCadence') ?? 'daily',
     interval: field(b, 'intervalHours') ?? null,
@@ -46,8 +47,18 @@ for (const b of blocks) {
      SELECT ${q(p.key)}, ${q(p.name)}, ${q(p.description)}, ${q(p.category)}, ${q(p.owner)}, ${q(p.repo)}, ${q(p.branch)}, ${q(url)}, ${q(p.mode)},
        ${q(p.cadence)}, '', ${q(p.interval)}, ${q(p.time === undefined ? '07:00' : p.time)}, 'Asia/Seoul', ${p.grace}, ${q(p.priority)}, 'AUDIT', 0, 1, 'UNKNOWN', ${q(now)}, ${q(now)}
      WHERE NOT EXISTS (SELECT 1 FROM projects WHERE project_key = ${q(p.key)});`,
-    `INSERT OR IGNORE INTO project_sources (project_id, source_type, external_identifier, config_json, is_enabled, created_at, updated_at)
+    // 감시 방식에 맞는 소스만 만든다(heartbeat 소스는 대시보드에서 키를 발급할 때 생긴다)
+    ...(p.mode === 'github_actions' || p.mode === 'github_webhook'
+      ? [
+          `INSERT OR IGNORE INTO project_sources (project_id, source_type, external_identifier, config_json, is_enabled, created_at, updated_at)
      SELECT id, 'github_actions', ${q(p.wf)}, ${q(JSON.stringify({ event: p.event }))}, 1, ${q(now)}, ${q(now)} FROM projects WHERE project_key = ${q(p.key)};`,
+        ]
+      : p.mode === 'github_commits'
+        ? [
+            `INSERT OR IGNORE INTO project_sources (project_id, source_type, external_identifier, config_json, is_enabled, created_at, updated_at)
+     SELECT id, 'github_commits', ${q(p.commitFilter)}, '{}', 1, ${q(now)}, ${q(now)} FROM projects WHERE project_key = ${q(p.key)};`,
+          ]
+        : []),
     `INSERT INTO audit_logs (actor, action, resource_type, resource_id, safe_metadata_json, created_at)
      SELECT 'admin-cli', 'project.create', 'project', id, ${q(JSON.stringify({ projectKey: p.key, via: 'seed-presets' }))}, ${q(now)}
      FROM projects WHERE project_key = ${q(p.key)} AND created_at = ${q(now)};`,

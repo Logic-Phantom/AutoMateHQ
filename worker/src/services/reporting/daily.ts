@@ -73,8 +73,8 @@ export async function generateReport(env: Env, db: Db, deps: AppDeps, reportDate
 }
 
 /**
- * 07:00 KST 정기 보고서.
- * - cron은 10분마다 실행되며, 07:00~12:00 KST 사이에 아직 보내지 않은 날짜만 처리한다(지연 복구).
+ * 정기 보고서(DAILY_REPORT_HOUR KST).
+ * - cron은 10분마다 실행되며, DAILY_REPORT_HOUR~DAILY_REPORT_CATCHUP_END_HOUR KST 사이에 아직 보내지 않은 날짜만 처리한다(지연 복구).
  * - report_date_local UNIQUE + 상태로 같은 날 중복 발송을 막는다.
  * - 실패 시 다음 cron(10분 후)에 재시도, 최대 3회.
  */

@@ -4,7 +4,7 @@ import { redact } from '../security/redact';
 export interface RunUpsert {
   projectId: number;
   sourceId: number | null;
-  sourceType: 'github_actions' | 'heartbeat';
+  sourceType: 'github_actions' | 'github_commits' | 'heartbeat';
   externalRunId: string;
   triggerType?: string | null;
   workflowName?: string | null;

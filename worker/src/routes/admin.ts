@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { setCookie } from 'hono/cookie';
 import { PROJECT_PRESETS } from '../../../shared/presets';
+import { DAILY_REPORT_TIME_LABEL, DAILY_REPORT_WINDOW_LABEL } from '../../../shared/constants';
 import {
   githubTokenSchema,
   incidentActionSchema,
@@ -646,7 +647,7 @@ export function adminRoutes(deps: AppDeps) {
       { key: 'kakao_app', label: 'Kakao Developers 앱 설정', state: env.KAKAO_REST_API_KEY ? '완료' : '필요' },
       { key: 'kakao_oauth', label: '카카오 OAuth 연결', state: kakao?.status === 'connected' ? '완료' : '필요', detail: kakao?.status },
       { key: 'kakao_test', label: '카카오 테스트 메시지', state: (kakaoMsg?.n ?? 0) > 0 ? '완료' : '필요' },
-      { key: 'daily', label: '오전 7시 보고서 활성화', state: settings.dailyReportEnabled && kakao?.status === 'connected' ? '완료' : '필요' },
+      { key: 'daily', label: `${DAILY_REPORT_TIME_LABEL} 정기 보고서 활성화`, state: settings.dailyReportEnabled && kakao?.status === 'connected' ? '완료' : '필요' },
       { key: 'claude', label: 'Claude Code Routine 연결', state: routines.length > 0 ? '완료' : '선택' },
     ];
     return ok(c, {
@@ -664,9 +665,9 @@ export function adminRoutes(deps: AppDeps) {
       cron: env.SCHEDULER_OIDC_REPOSITORY
         ? {
             expression: '*/10 * * * *',
-            note: `GitHub Actions(${env.SCHEDULER_OIDC_REPOSITORY} scheduler.yml, UTC)가 10분마다 깨움 — Cloudflare 무료 Cron 한도 대체. 실행이 지연될 수 있어 07:00~12:00 KST 사이 미발송 보고서를 따라잡아 발송.`,
+            note: `GitHub Actions(${env.SCHEDULER_OIDC_REPOSITORY} scheduler.yml, UTC)가 10분마다 깨움 — Cloudflare 무료 Cron 한도 대체. 실행이 지연될 수 있어 ${DAILY_REPORT_WINDOW_LABEL} KST 사이 미발송 보고서를 따라잡아 발송.`,
           }
-        : { expression: '*/10 * * * *', note: 'Cloudflare Cron은 UTC 기준. 07:00~12:00 KST 사이 미발송 보고서를 발송(지연 복구).' },
+        : { expression: '*/10 * * * *', note: `Cloudflare Cron은 UTC 기준. ${DAILY_REPORT_WINDOW_LABEL} KST 사이 미발송 보고서를 발송(지연 복구).` },
       onboarding: steps,
     });
   });

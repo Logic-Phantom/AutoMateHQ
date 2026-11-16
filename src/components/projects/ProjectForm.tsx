@@ -39,6 +39,7 @@ export const EMPTY_PROJECT: ProjectInput = {
   isActive: true,
   workflowFile: null,
   workflowEvent: 'any',
+  commitFilter: null,
 };
 
 export function ProjectForm({
@@ -57,7 +58,8 @@ export function ProjectForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const set = <K extends keyof ProjectInput>(k: K, value: ProjectInput[K]) => setV((s) => ({ ...s, [k]: value }));
-  const usesGithub = v.monitoringMode === 'github_actions' || v.monitoringMode === 'github_webhook';
+  const usesGithub = v.monitoringMode === 'github_actions' || v.monitoringMode === 'github_webhook' || v.monitoringMode === 'github_commits';
+  const usesCommits = v.monitoringMode === 'github_commits';
 
   const submit = async () => {
     setBusy(true);
@@ -132,9 +134,15 @@ export function ProjectForm({
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="감시할 워크플로 파일" hint="비우면 저장소의 모든 워크플로">
-            {(id) => <input id={id} value={v.workflowFile ?? ''} onChange={(e) => set('workflowFile', e.target.value || null)} className={inputCls} placeholder="daily.yml" />}
-          </Field>
+          {usesCommits ? (
+            <Field label="실행으로 인정할 커밋 문구" hint="기본 브랜치에서 이 문구가 들어간 커밋만 1회 실행으로 셉니다. 비우면 모든 커밋">
+              {(id) => <input id={id} value={v.commitFilter ?? ''} onChange={(e) => set('commitFilter', e.target.value || null)} className={inputCls} placeholder="[자동 갱신]" />}
+            </Field>
+          ) : (
+            <Field label="감시할 워크플로 파일" hint="비우면 저장소의 모든 워크플로">
+              {(id) => <input id={id} value={v.workflowFile ?? ''} onChange={(e) => set('workflowFile', e.target.value || null)} className={inputCls} placeholder="daily.yml" />}
+            </Field>
+          )}
           <Field label="문서 URL (https)" error={fieldErrors.docsUrl}>
             {(id) => <input id={id} value={v.docsUrl ?? ''} onChange={(e) => set('docsUrl', e.target.value || null)} className={inputCls} />}
           </Field>

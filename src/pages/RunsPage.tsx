@@ -71,7 +71,7 @@ export function RunsPage() {
                 <Td>{r.projectName}</Td>
                 <Td className="text-ink-soft">
                   {r.workflowName ?? '-'}{r.stage ? ` · ${r.stage}` : ''}
-                  <div className="text-xs text-ink-mute">{r.sourceType === 'github_actions' ? `GitHub · ${r.triggerType ?? ''}` : 'Heartbeat'}{r.runAttempt && r.runAttempt > 1 ? ` · 시도 ${r.runAttempt}` : ''}</div>
+                  <div className="text-xs text-ink-mute">{r.sourceType === 'github_actions' ? `GitHub · ${r.triggerType ?? ''}` : r.sourceType === 'github_commits' ? 'GitHub 커밋' : 'Heartbeat'}{r.runAttempt && r.runAttempt > 1 ? ` · 시도 ${r.runAttempt}` : ''}</div>
                 </Td>
                 <Td>
                   <Badge tone={runTone(r.status)}>{RUN_STATUS_LABEL[r.status as RunStatus] ?? r.status}</Badge>

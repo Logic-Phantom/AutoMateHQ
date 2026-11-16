@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
-import { INTEGRATION_STATUS_LABEL } from '@shared/constants';
+import { DAILY_REPORT_TIME_LABEL, DAILY_REPORT_WINDOW_LABEL, INTEGRATION_STATUS_LABEL } from '@shared/constants';
 import { errorMessage, get, patch, post } from '@/lib/api';
 import { fmtDateTime } from '@/lib/format';
 import type { KakaoStatusDto } from '@/types/api';
@@ -58,7 +58,7 @@ export function NotificationsPage() {
 
   return (
     <>
-      <PageHeader title="알림 설정" description="매일 07:00(한국 시간) 운영 보고서를 카카오톡 ‘나와의 채팅’으로 보냅니다." />
+      <PageHeader title="알림 설정" description={`매일 ${DAILY_REPORT_TIME_LABEL}(한국 시간) 운영 보고서를 카카오톡 ‘나와의 채팅’으로 보냅니다.`} />
       {cb && <div className="mb-3"><Notice tone={cb.tone}>{cb.text}</Notice></div>}
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="카카오톡 연결">
@@ -99,7 +99,7 @@ export function NotificationsPage() {
             <div className="space-y-3 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={history.data.settings.dailyReportEnabled} onChange={(e) => settings.mutate({ dailyReportEnabled: e.target.checked })} />
-                오전 7시 정기 보고서
+                {DAILY_REPORT_TIME_LABEL} 정기 보고서
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={history.data.settings.instantAlertsEnabled} onChange={(e) => settings.mutate({ instantAlertsEnabled: e.target.checked })} />
@@ -116,7 +116,7 @@ export function NotificationsPage() {
                 </select>
               </label>
               <p className="text-xs text-ink-mute">
-                Cloudflare Cron은 UTC 기준(10분 간격)으로 실행되며, 07:00~12:00 KST 사이에 아직 보내지 않은 날의 보고서를 보냅니다. 같은 날짜는 한 번만 보내고 실패 시 최대 3회 재시도합니다.
+                스케줄러는 10분 간격(UTC 기준, 지연될 수 있음)으로 실행되며, {DAILY_REPORT_WINDOW_LABEL} KST 사이에 아직 보내지 않은 날의 보고서를 보냅니다. 같은 날짜는 한 번만 보내고 실패 시 최대 3회 재시도합니다.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => void preview.refetch()} loading={preview.isFetching}>보고서 미리보기</Button>
@@ -172,7 +172,7 @@ export function NotificationsPage() {
           </>
         }
       >
-        HQ에 저장된 카카오 토큰을 삭제하면 07:00 보고서가 발송되지 않습니다. “토큰 폐기”는 카카오 로그아웃 API로 이 토큰만 만료시키며, 같은 카카오 앱을 쓰는 다른 프로젝트의 동의(연결 끊기)는 건드리지 않습니다.
+        HQ에 저장된 카카오 토큰을 삭제하면 {DAILY_REPORT_TIME_LABEL} 정기 보고서가 발송되지 않습니다. “토큰 폐기”는 카카오 로그아웃 API로 이 토큰만 만료시키며, 같은 카카오 앱을 쓰는 다른 프로젝트의 동의(연결 끊기)는 건드리지 않습니다.
       </Modal>
     </>
   );

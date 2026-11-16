@@ -23,6 +23,7 @@ export interface ProjectDto {
   isActive: boolean;
   workflowFile: string | null;
   workflowEvent: 'schedule' | 'any';
+  commitFilter: string | null;
   hasHeartbeat: boolean;
   lastSyncedAt: string | null;
   lastSyncErrorCode: string | null;

@@ -44,7 +44,9 @@
         "APP_MODE": "demo",
         "APP_TIMEZONE": "Asia/Seoul",
         "PUBLIC_BASE_URL": "http://localhost:5173",
-        "ALLOWED_ORIGINS": "http://localhost:5173"
+        "ALLOWED_ORIGINS": "http://localhost:5173",
+        // 샘플 모드에서는 외부 스케줄러 트리거를 쓰지 않는다(빈 값 = /api/v1/scheduler/tick 비활성)
+        "SCHEDULER_OIDC_REPOSITORY": ""
       },
       "d1_databases": [
         {

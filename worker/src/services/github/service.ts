@@ -6,7 +6,7 @@ import { getIntegration, markIntegrationStatus, readCredentials } from '../../re
 import type { ProjectRow, SourceRow } from '../../repositories/projects';
 import { raiseIncident, resolveByFingerprint } from '../incidents/engine';
 import { addRunEvent, upsertRunStmt } from '../runs';
-import { GithubApiError, GithubClient, normalizeRunStatus, type WorkflowRunApi } from './client';
+import { GithubApiError, GithubClient, normalizeRunStatus, type CommitApi, type WorkflowRunApi } from './client';
 
 export interface GithubCredentials {
   token: string;
@@ -63,6 +63,39 @@ export function runFromApi(project: ProjectRow, source: SourceRow | null, r: Wor
   };
 }
 
+/** 커밋 감시에서 몇 일 전 커밋까지 가져올지(판정 기준선·14일 차트용) */
+export const COMMIT_LOOKBACK_DAYS = 14;
+
+/** 커밋 메시지 필터. '*' 또는 빈 값이면 모든 커밋. 대소문자 무시 부분 일치. */
+export function commitMatches(c: CommitApi, filter: string): boolean {
+  if (!filter || filter === '*') return true;
+  return c.commit.message.toLowerCase().includes(filter.toLowerCase());
+}
+
+/**
+ * 커밋 1건 = 성공한 실행 1회로 기록한다(Actions가 없는 자동화, 예: claude.ai 루틴이 매일 커밋).
+ * 실패는 커밋으로 드러나지 않으므로 '예정 시각+유예 안에 커밋이 없음 → 미실행'으로만 감지한다.
+ */
+export function runFromCommit(project: ProjectRow, source: SourceRow, c: CommitApi) {
+  const at = c.commit.committer?.date ?? c.commit.author?.date ?? null;
+  const title = c.commit.message.split('\n')[0]!.slice(0, 120);
+  return {
+    projectId: project.id,
+    sourceId: source.id,
+    sourceType: 'github_commits' as const,
+    externalRunId: c.sha,
+    triggerType: 'commit',
+    workflowName: title,
+    status: 'success',
+    startedAt: at,
+    completedAt: at,
+    branch: project.default_branch,
+    commitSha: c.sha,
+    externalUrl: c.html_url,
+    summary: c.commit.author?.name ? `작성자: ${c.commit.author.name}` : null,
+  };
+}
+
 /**
  * GitHub Actions 실행 기록 동기화(폴링). Webhook이 놓친 이벤트를 보완한다.
  * 한 번에 몇 개 프로젝트만 처리한다(무료 플랜 subrequest/CPU 제한).
@@ -81,7 +114,7 @@ export async function syncGithubProjects(
     : await all<ProjectRow>(
         db,
         `SELECT p.* FROM projects p WHERE p.deleted_at IS NULL AND p.is_active = 1 AND p.repo_owner IS NOT NULL
-           AND EXISTS (SELECT 1 FROM project_sources s WHERE s.project_id = p.id AND s.source_type='github_actions' AND s.is_enabled=1)
+           AND EXISTS (SELECT 1 FROM project_sources s WHERE s.project_id = p.id AND s.source_type IN ('github_actions','github_commits') AND s.is_enabled=1)
          ORDER BY COALESCE(p.last_synced_at, '') ASC LIMIT ?`,
         opts.maxProjects,
       );
@@ -93,7 +126,27 @@ export async function syncGithubProjects(
       `SELECT * FROM project_sources WHERE project_id=? AND source_type='github_actions' AND is_enabled=1 LIMIT 1`,
       p.id,
     );
+    const commitSource = await first<SourceRow>(
+      db,
+      `SELECT * FROM project_sources WHERE project_id=? AND source_type='github_commits' AND is_enabled=1 LIMIT 1`,
+      p.id,
+    );
     try {
+      if (commitSource) {
+        const commits = await gh.client.listCommits(p.repo_owner!, p.repo_name!, {
+          branch: p.default_branch,
+          since: new Date(now.getTime() - COMMIT_LOOKBACK_DAYS * 86_400_000).toISOString(),
+          perPage: 50,
+        });
+        const matched = commits.filter((c) => commitMatches(c, commitSource.external_identifier));
+        await db.batch([
+          ...matched.map((c) => upsertRunStmt(db, runFromCommit(p, commitSource, c), now)),
+          stmt(db, `UPDATE projects SET last_synced_at=?, last_sync_error_code=NULL WHERE id=?`, now.toISOString(), p.id),
+        ]);
+        await resolveByFingerprint(db, 'integration:github:AUTH_INVALID', now);
+        synced++;
+        continue;
+      }
       // event로 거르지 않는다: 예약 실행이 실패해 수동(workflow_dispatch)으로 다시 돌린 경우도 같은 회차로 인정한다.
       const runs = await gh.client.listRuns(p.repo_owner!, p.repo_name!, {
         workflowFile: source && source.external_identifier !== '*' ? source.external_identifier : null,

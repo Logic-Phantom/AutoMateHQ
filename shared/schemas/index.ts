@@ -56,6 +56,8 @@ const projectBaseSchema = z.object({
       .nullable()
       .default(null),
     workflowEvent: z.enum(['schedule', 'any']).default('any'),
+    /** github_commits 모드: 이 문구가 들어간 커밋만 실행으로 인정(비우면 기본 브랜치의 모든 커밋) */
+    commitFilter: z.string().trim().max(100).nullable().default(null),
   });
 
 type ProjectShape = z.infer<typeof projectBaseSchema>;
@@ -65,7 +67,7 @@ export function validateProjectShape(v: ProjectShape): { path: string; message: 
   const issues: { path: string; message: string }[] = [];
   const add = (path: string, message: string) => issues.push({ path, message });
   if ((v.repoOwner && !v.repoName) || (!v.repoOwner && v.repoName)) add('repoName', '저장소 owner와 이름을 함께 입력하세요.');
-  if ((v.monitoringMode === 'github_actions' || v.monitoringMode === 'github_webhook') && !v.repoOwner)
+  if ((v.monitoringMode === 'github_actions' || v.monitoringMode === 'github_webhook' || v.monitoringMode === 'github_commits') && !v.repoOwner)
     add('repoOwner', 'GitHub 모니터링에는 저장소가 필요합니다.');
   if (v.expectedCadence === 'weekly' && v.expectedDays.length === 0) add('expectedDays', '매주 실행 요일을 하나 이상 고르세요.');
   if (v.expectedCadence === 'interval' && !v.intervalHours) add('intervalHours', '실행 간격(시간)을 입력하세요.');

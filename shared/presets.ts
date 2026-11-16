@@ -169,7 +169,7 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
   },
   {
     presetId: 'devvibe',
-    hint: 'Actions 없음 · 매일 09:00 Claude Code 루틴(Anthropic 클라우드)이 갱신 → Heartbeat로 감시',
+    hint: 'Actions 없음 · 매일 09:00 Claude Code 루틴(Anthropic 클라우드)이 "[자동 갱신]" 커밋 → 커밋 감시(루틴 수정·secret 불필요)',
     input: {
       projectKey: 'devvibe',
       name: 'DevVibe 포트폴리오',
@@ -178,7 +178,8 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
       repoOwner: 'Logic-Phantom',
       repoName: 'DevVibe',
       defaultBranch: 'master',
-      monitoringMode: 'heartbeat',
+      monitoringMode: 'github_commits',
+      commitFilter: '[자동 갱신]',
       workflowFile: null,
       workflowEvent: 'any',
       expectedCadence: 'daily',

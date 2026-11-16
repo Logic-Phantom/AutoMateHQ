@@ -167,3 +167,73 @@ describe('워크플로 재실행', () => {
     expect(gh.calls.some((c) => c.url.endsWith('/rerun-failed-jobs'))).toBe(false);
   });
 });
+
+describe('저장소 커밋 감시(github_commits)', () => {
+  const commit = (sha: string, message: string, date: string) => ({
+    sha,
+    html_url: `https://github.com/Logic-Phantom/DevVibe/commit/${sha}`,
+    commit: { message, author: { name: 'Claude', date }, committer: { name: 'Claude', date } },
+  });
+
+  async function setup(now: Date) {
+    const gh = mockFetch((call) => {
+      if (call.url.endsWith('/user')) return json({ login: 'Logic-Phantom' });
+      if (call.url.endsWith('/rate_limit')) return json({ resources: { core: { limit: 5000, remaining: 4999, reset: 0 } } });
+      if (call.url.includes('/repos/Logic-Phantom/DevVibe/commits'))
+        return json([
+          commit('c3', '[자동 갱신] 포트폴리오 업데이트 (2026-11-16)\n\n- 상세', '2026-11-16T00:06:32Z'),
+          commit('c2', '[임채명] 수동 수정', '2026-11-15T04:18:36Z'),
+          commit('c1', '[자동 갱신] 포트폴리오 업데이트 (2026-11-15)', '2026-11-15T00:05:00Z'),
+        ]);
+      return json({ message: 'unexpected' }, 500);
+    });
+    const h = await createHarness({ fetch: gh.fn, now });
+    await h.login();
+    await h.request('PUT', '/api/integrations/github', { token: 'github_pat_' + 'A'.repeat(40) });
+    const res = await h.request('POST', '/api/projects', {
+      projectKey: 'devvibe',
+      name: 'DevVibe',
+      repoOwner: 'Logic-Phantom',
+      repoName: 'DevVibe',
+      defaultBranch: 'master',
+      monitoringMode: 'github_commits',
+      commitFilter: '[자동 갱신]',
+      expectedCadence: 'daily',
+      expectedTimeLocal: '09:00',
+      gracePeriodMinutes: 120,
+    });
+    expect(res.status).toBe(201);
+    const id = (await body(res)).data.id as number;
+    return { h, gh, id };
+  }
+
+  it('필터 문구가 들어간 기본 브랜치 커밋만 성공 실행으로 기록하고 Actions 소스는 만들지 않는다', async () => {
+    const { h, gh, id } = await setup(new Date('2026-11-16T01:00:00Z'));
+    expect(h.db.count('project_sources', `project_id=${id} AND source_type='github_actions' AND is_enabled=1`)).toBe(0);
+    const sync = await body(await h.request('POST', `/api/projects/${id}/sync`));
+    expect(sync.data.synced).toBe(1);
+    const call = gh.calls.find((c) => c.url.includes('/commits'))!;
+    expect(call.url).toContain('sha=master');
+    expect(call.url).toContain('since=');
+    const runs = h.db.raw
+      .prepare(`SELECT external_run_id, status, source_type, workflow_name FROM runs ORDER BY started_at DESC`)
+      .all() as { external_run_id: string; status: string; source_type: string; workflow_name: string }[];
+    expect(runs.map((r) => r.external_run_id)).toEqual(['c3', 'c1']);
+    expect(runs.every((r) => r.status === 'success' && r.source_type === 'github_commits')).toBe(true);
+    expect(runs[0]!.workflow_name).toBe('[자동 갱신] 포트폴리오 업데이트 (2026-11-16)');
+    const dto = (await body(await h.request('GET', `/api/projects/${id}`))).data;
+    expect((dto.project ?? dto).commitFilter).toBe('[자동 갱신]');
+  });
+
+  it('예정 시각+유예 안에 커밋이 없으면 정상으로 보지 않는다', async () => {
+    // 11-14에 등록(기준선 수집 기간 이후), 11-18 12:00 KST: 11-17·11-18 09:00 회차 커밋이 없음(마지막 커밋 11-16)
+    const { h, id } = await setup(new Date('2026-11-14T00:00:00Z'));
+    h.clock.now = new Date('2026-11-18T03:00:00Z');
+    await h.request('POST', `/api/projects/${id}/sync`);
+    const { evaluateAll } = await import('../../worker/src/services/monitoring/evaluate');
+    const r = await evaluateAll(h.db, h.deps.now());
+    const e = r.evaluations.find((x) => x.project.id === id)!;
+    expect(e.classification.status).not.toBe('NORMAL');
+    expect(e.classification.reasons.some((x) => x.code === 'MISSED_RUN')).toBe(true);
+  });
+});

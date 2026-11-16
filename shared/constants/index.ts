@@ -23,11 +23,12 @@ export const CATEGORY_LABEL: Record<ProjectCategory, string> = {
   other: '기타',
 };
 
-export const MONITORING_MODES = ['github_actions', 'github_webhook', 'heartbeat', 'official_api', 'manual'] as const;
+export const MONITORING_MODES = ['github_actions', 'github_webhook', 'github_commits', 'heartbeat', 'official_api', 'manual'] as const;
 export type MonitoringMode = (typeof MONITORING_MODES)[number];
 export const MONITORING_MODE_LABEL: Record<MonitoringMode, string> = {
   github_actions: 'GitHub Actions 조회',
   github_webhook: 'GitHub Webhook',
+  github_commits: '저장소 커밋 감시',
   heartbeat: 'Heartbeat',
   official_api: '공식 API',
   manual: '수동',
@@ -174,9 +175,14 @@ export const API_ERROR_LABEL: Record<ApiErrorCode, string> = {
   NOT_CONFIGURED: '미연동',
 };
 
-/** 정기 보고서를 보낼 수 있는 한국 시간 구간. 07:00에 못 보내면 이 시각 전까지 따라잡는다. */
-export const DAILY_REPORT_HOUR = 7;
-export const DAILY_REPORT_CATCHUP_END_HOUR = 12;
+/**
+ * 정기 보고서를 보낼 수 있는 한국 시간 구간. 감시 대상 자동화가 대부분 07:00~12:00에 끝나므로 12:00에 보낸다.
+ * 스케줄러(GitHub Actions cron)가 몇 시간씩 늦을 수 있어 이 시각 전까지 따라잡는다.
+ */
+export const DAILY_REPORT_HOUR = 12;
+export const DAILY_REPORT_CATCHUP_END_HOUR = 22;
+export const DAILY_REPORT_TIME_LABEL = `${String(DAILY_REPORT_HOUR).padStart(2, '0')}:00`;
+export const DAILY_REPORT_WINDOW_LABEL = `${DAILY_REPORT_TIME_LABEL}~${DAILY_REPORT_CATCHUP_END_HOUR}:00`;
 
 /** 카카오 기본 텍스트 템플릿의 text 최대 길이(공식 문서: 최대 200자). */
 export const KAKAO_TEXT_LIMIT = 200;

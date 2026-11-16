@@ -137,16 +137,16 @@ describe('카카오 토큰 갱신', () => {
   });
 });
 
-describe('07:00 정기 보고서', () => {
+describe('12:00 정기 보고서', () => {
   it('발송 성공/실패 이력을 저장하고 같은 날짜에는 중복 발송하지 않는다', async () => {
     const k = kakaoServer();
-    // 2026-11-16 07:05 KST
-    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-15T22:05:00Z') });
+    // 2026-11-16 12:05 KST
+    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-16T03:05:00Z') });
     await connected(h);
     const first = await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' });
     expect(first.action).toBe('sent');
     expect(first.reportDate).toBe('2026-11-16');
-    h.clock.now = new Date('2026-11-15T22:15:00Z');
+    h.clock.now = new Date('2026-11-16T03:15:00Z');
     const second = await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' });
     expect(second.action).toBe('skipped');
     const memoCalls = k.calls.filter((c) => c.url.includes('memo')).length;
@@ -156,12 +156,14 @@ describe('07:00 정기 보고서', () => {
     expect(h.db.count('notification_deliveries', `notification_type='daily_report' AND status='sent'`)).toBe(1);
   });
 
-  it('07시 이전에는 보내지 않고, 실패하면 이력을 남긴 뒤 다음 cron에서 재시도한다', async () => {
+  it('12시 이전·22시 이후에는 보내지 않고, 실패하면 이력을 남긴 뒤 다음 cron에서 재시도한다', async () => {
     const k = kakaoServer({ sendStatus: 500 });
-    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-15T21:50:00Z') }); // 06:50 KST
+    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-16T02:50:00Z') }); // 11:50 KST
     await connected(h);
     expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('skipped');
-    h.clock.now = new Date('2026-11-15T22:00:00Z');
+    h.clock.now = new Date('2026-11-16T13:00:00Z'); // 22:00 KST — 따라잡기 창 밖
+    expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('skipped');
+    h.clock.now = new Date('2026-11-16T03:00:00Z');
     expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('failed');
     expect(h.db.get<{ status: string; attempt_count: number }>(`SELECT status, attempt_count FROM daily_reports`)).toEqual({ status: 'failed', attempt_count: 1 });
     expect(h.db.count('notification_deliveries', `status='failed'`)).toBe(1);

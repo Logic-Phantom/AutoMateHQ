@@ -178,7 +178,7 @@ export function ProjectDetailPage() {
             {runs.map((r) => (
               <tr key={r.id}>
                 <Td className="tabular whitespace-nowrap">{fmtDateTime(r.startedAt)}</Td>
-                <Td>{r.sourceType === 'github_actions' ? 'GitHub' : 'Heartbeat'}</Td>
+                <Td>{r.sourceType === 'github_actions' ? 'GitHub' : r.sourceType === 'github_commits' ? '커밋' : 'Heartbeat'}</Td>
                 <Td className="text-ink-soft">{r.workflowName ?? '-'}{r.stage ? ` · ${r.stage}` : ''}</Td>
                 <Td><Badge tone={runTone(r.status)}>{RUN_STATUS_LABEL[r.status as RunStatus] ?? r.status}</Badge></Td>
                 <Td className="text-xs text-ink-soft">{r.safeErrorMessage ?? r.errorCode ?? '-'}</Td>

@@ -2,12 +2,12 @@
 
 <img src="docs/assets/icon.webp" width="96" alt="AI Automation HQ 아이콘" />
 
-**여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 오전 7시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
+**여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 낮 12시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
 
 유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog·GitHub Pages), GitHub 프로필, 포트폴리오(DevVibe) 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
-> 현재 상태(2026-11-15 18:15 KST): **운영 중** — https://automatehq.dlacoaud96.workers.dev
-> GitHub·카카오톡·Claude Routine 모두 `connected`. 프로젝트 9개 감시. 07:00 정기 보고서 첫 실수신은 아직 확인 전.
+> 현재 상태(2026-11-16 12:45 KST): **운영 중** — https://automatehq.dlacoaud96.workers.dev
+> GitHub·카카오톡·Claude Routine 모두 `connected`(Routine 실호출·AUDIT 결과 확인). 프로젝트 9개 모두 동기화(정상 8·실패 1: 기술 블로그 Pages 배포 일시 실패 — 재실행 대기). 첫 정기 보고서 발송 완료(11-16 09:19), 이후 정기 보고서는 **12:00 KST**.
 > 다음 작업은 바로 아래 **“다음 세션에서 이어서 하기”** 부터.
 
 ## 다음 세션에서 이어서 하기
@@ -33,15 +33,15 @@
 
 ### 1. 먼저 확인할 것(순서대로)
 
-1. **GitHub 예약 실행 간격** — 2026-11-16 확인: `schedule` 실행이 **10분 간격이 아니라 00:45·05:35·09:19 KST 3번뿐**(4~5시간 간격). 그래서 첫 07:00 보고서가 **09:19 KST에 지연 발송**됐다(`sent`, 1회 시도). 따라잡기 창(07:00~12:00) 안에 tick이 하나도 안 들어오는 날은 보고서가 빠진다. → Cloudflare Cron 복구(아래 대안)를 권장.
+1. **GitHub 예약 실행 간격** — 2026-11-16 확인: `schedule` 실행이 **10분 간격이 아니라 00:45·05:35·09:19 KST 3번뿐**(4~5시간 간격). 첫 보고서(당시 07:00 기준)가 09:19에 지연 발송됐다. → **보고서를 12:00로 옮기고 따라잡기 창을 12:00~22:00으로 넓혔다.** 그래도 창 안에 tick이 없으면 빠지므로 Cloudflare Cron 복구(아래 대안)가 근본 해결.
 
    ```bash
    curl -s "https://api.github.com/repos/Logic-Phantom/AutoMateHQ/actions/workflows/scheduler.yml/runs?per_page=10"
    ```
 
-   `"event": "schedule"` 실행이 계속 없으면 07:00 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
-2. **07:00 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지.
-3. **나머지 6개 프로젝트 동기화** — 스케줄러가 1회에 3개씩 동기화한다. `last_synced_at`이 채워졌는지.
+   `"event": "schedule"` 실행이 계속 없으면 정기 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
+2. **12:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지. 2026-11-17이 12:00 기준 첫 발송일.
+3. **동기화 최신 여부** — 2026-11-16부터 스케줄러가 한 번 깨어날 때 동기화 전용 호출 2회 + 전체 tick 1회를 보내 9개 프로젝트를 모두 갱신한다. 모든 프로젝트의 `last_synced_at`이 같은 시각대인지 확인. 급하면 프로젝트 상세의 **연결 테스트** 버튼이 즉시 동기화한다.
 
 ```bash
 npx wrangler d1 execute automatehq --remote --command "SELECT project_key, last_status, last_status_reason, last_synced_at FROM projects WHERE deleted_at IS NULL"
@@ -55,8 +55,9 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | # | 작업 | 메모 |
 |---|---|---|
-| 1 | DevVibe Heartbeat 연결 | HQ 프로젝트 상세(DevVibe)에서 Heartbeat 키 발급 → claude.ai “DevVibe 포트폴리오 매일 자동 갱신” 루틴 지침 끝에 HQ 보고 단계 추가(docs/HEARTBEAT_INTEGRATION.md). 루틴 클라우드 네트워크에서 workers.dev 호출 가능 여부 먼저 확인. **기존 루틴 수정이라 사용자 확인 후 진행** |
-| 2 | Claude Routine 첫 호출 검증 | 대시보드 > 프로젝트 상세 > AI 유지보수 실행(AUDIT) → 세션 링크·결과 회신 확인. 회신이 막히면 세션에서 결과 확인 |
+| 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
+| 2 | **Routine 결과 회신 허용(사용자 설정)** | AUDIT 호출·점검은 성공(2026-11-16, 기술 블로그 원인 분석까지 정상). 그러나 루틴 클라우드 환경의 네트워크 정책이 `automatehq.dlacoaud96.workers.dev`를 막아(프록시 403) HQ 콜백 실패 → 대시보드에 계속 ‘시작됨’. claude.ai > Code > 환경 설정에서 루틴이 쓰는 환경의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가 필요. 그전까지는 세션 링크에서 결과 확인 |
+| 2-1 | **기술 블로그 실패 job 재실행(사용자 승인)** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). HQ 실행 이력 > 재실행 또는 GitHub에서 “Re-run failed jobs”. 최신 커밋 a26e34b9 미배포 상태 |
 | 3 | StrangeRecords 오케스트레이터 루틴 | claude.ai에 매일 07:00 “StrangeRecords Daily Production Orchestrator” 루틴이 있음. Actions와 별개로 Heartbeat 보고를 붙일지 결정 |
 | 4 | (선택) GitHub Webhook | 저장소별 Webhook 등록하면 10분 폴링 대신 즉시 반영. Secret은 `.secrets/github-webhook-secret.txt` |
 | 5 | (선택) 게시 상태 연동 | 각 YouTube/Instagram 파이프라인에 publication 이벤트 전송(기존 저장소 수정 필요) |
@@ -68,7 +69,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 대시보드 | https://automatehq.dlacoaud96.workers.dev (관리자 비밀번호: 로컬 `.secrets/admin-password.txt`, Git 제외) |
 | Cloudflare | Worker `automatehq`, D1 `automatehq`(APAC, id `a00e5b07-…`), 계정 Cron 5개 한도 사용 중 |
 | Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
-| 스케줄러 | `.github/workflows/scheduler.yml`(10분) → `POST /api/v1/scheduler/tick`, GitHub OIDC 인증(비밀 값 없음) |
+| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×2 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 12:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
 | GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 10개, Actions RW + Metadata R, **2027-02-13 만료** |
 | Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
@@ -85,13 +86,13 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | 영역 | 내용 |
 |---|---|
-| 관제 대시보드 | 상태 분포 막대, 24시간 실행/실패 + 14일 스파크라인, 14일 실행 결과 누적 막대, 프로젝트별 14일 실행 스트립, 미해결 장애, 실행 타임라인, 다음 예정 작업, 오늘 07:00 보고서 상태 |
+| 관제 대시보드 | 상태 분포 막대, 24시간 실행/실패 + 14일 스파크라인, 14일 실행 결과 누적 막대, 프로젝트별 14일 실행 스트립, 미해결 장애, 실행 타임라인, 다음 예정 작업, 오늘 12:00 보고서 상태 |
 | 프로젝트 관리 | 등록·수정·비활성·soft delete, 기존 저장소 등록 제안, 기대 일정(매일·평일·요일·N시간·비정기)·유예 시간·중요도, 연결 테스트(워크플로 비활성/삭제 감지), Heartbeat 키 발급·재발급·폐기, 유지보수 허용 범위 |
 | GitHub | Fine-grained PAT(암호화 저장), Actions 실행 폴링, `workflow_run` Webhook(HMAC·중복 차단), 401/403/404/rate limit 분류, **승인 기반 실패 job 재실행**(확인 문구·idempotency·직전 상태 재확인) |
 | Heartbeat | `start/complete/fail/events` 서명 API(HMAC + timestamp + nonce), Node·Python 예제 |
 | 게시 추적 | YouTube/Instagram 단계(planned→published/failed), 파이프라인 성공과 게시 완료 분리, “게시 완료 보고됨” vs “공식 API 검증” 구분 |
 | 판정·장애 | NORMAL/FAILED/ATTENTION/UNKNOWN, 예정일·유예·기준선 반영 미실행 탐지, 수집 실패 구분, fingerprint 묶음·자동 복구, 즉시 알림 쿨다운 |
-| 카카오톡 | OAuth(state), 토큰 암호화·자동 갱신·회전, 재연결 필요 감지, 테스트 메시지, **07:00 KST 정기 보고서**(날짜별 1회, 지연 복구, 3회 재시도), 장애 즉시 알림 |
+| 카카오톡 | OAuth(state), 토큰 암호화·자동 갱신·회전, 재연결 필요 감지, 테스트 메시지, **12:00 KST 정기 보고서**(날짜별 1회, 22:00까지 지연 복구, 3회 재시도), 장애 즉시 알림 |
 | AI 유지보수 | Claude Code Routine fire 어댑터(공식 계약), AUDIT/PROPOSE/DRAFT_PR 정책, 결과 회신(작업별 토큰), 테스트 미통과 PR은 “검토 필요”, 미연결 시 규칙 기반 점검 |
 | 비용·사용량 | GitHub Actions 실행 시간 막대 차트, ACTUAL/ESTIMATED/MANUAL/UNAVAILABLE 구분, 수동 기록 |
 | 보안 | 관리자 로그인(PBKDF2)·세션 쿠키·CSRF·호출 제한·AES-GCM·마스킹·감사 로그·보안 헤더 |
@@ -181,11 +182,14 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Claude Code Routine “AI Automation HQ 읽기 전용 점검” 생성(API 트리거, 감시 저장소 10개)
 - [x] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit, 표시 이름 “데일리”) — `connected`
 - [x] GitHub `schedule` 예약 실행 시작 확인(2026-11-16 00:45·05:35·09:19 KST) — 단, 간격이 4~5시간이라 Cloudflare Cron 복구 검토 필요
-- [ ] 정기 보고서 정시(07:00대) 발송 — 스케줄러 지연 해결 필요
+- [x] 정기 보고서 시각 12:00로 변경, 따라잡기 창 12:00~22:00(2026-11-16)
+- [ ] 정기 보고서 12:00대 정시 발송 — 스케줄러 지연이 계속되면 Cloudflare Cron 복구
 - [x] 맥 환경: `npx wrangler login` 완료(관리자 비밀번호는 암호 관리자로 공유)
-- [x] 감시 프로젝트 8개 동기화 완료(DevVibe는 Heartbeat 대상이라 제외)
-- [ ] DevVibe: 매일 09:00 루틴이 HQ에 Heartbeat를 보내도록 연결. 연결 전까지 ‘확인 불가’
-- [ ] Claude Routine 첫 AUDIT 호출·결과 회신 검증 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 12:26 재호출 **세션 생성 성공**. 결과 회신(callback) 도착 확인 남음
+- [x] 감시 프로젝트 9개 전체 동기화 완료(2026-11-16 12:39, 스케줄러 회당 전체 동기화로 개선)
+- [x] DevVibe: 저장소 커밋 감시(`[자동 갱신]`)로 연결 — 09:06 커밋 수집, 상태 ‘정상’(루틴 수정 없음)
+- [x] Claude Routine 첫 AUDIT 호출 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 재호출 세션 생성·점검 완료
+- [ ] Routine 결과 회신 — 루틴 환경 네트워크 정책이 workers.dev 차단(프록시 403). 환경 허용 도메인 추가 필요(사용자)
+- [ ] 기술 블로그 Pages 실패 job 재실행(사용자 승인)
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
 - [ ] (선택) 각 YouTube/Instagram 파이프라인 게시 이벤트 연동(기존 저장소 수정 필요 — 별도 작업)
 
@@ -214,3 +218,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 동기화 8개 완료. 기술 블로그(Logic-Phantom.github.io) 2026-11-16 03:02 KST `pages build and deployment` 실패 — build 성공, Deploy to GitHub Pages 단계만 실패(사이트는 200 응답). 일시 오류로 보이며 다음 실행 또는 HQ 재실행으로 확인
 - Claude Routine 첫 AUDIT(기술 블로그) 실패 원인 확인: `routine.ts`의 `redirect: 'error'`가 Workers 런타임에서 TypeError(로컬 workerd로 재현). `redirect: 'manual'` + 3xx 거부 + 시간 초과 구분으로 수정, 테스트 1개 추가(72개 통과)
 - 수정본 운영 배포(버전 `31fcd183`) → AUDIT 재실행 시 Routine 세션 생성 성공(`시작됨`)
+- 정기 보고서 07:00 → **12:00 KST**로 변경(감시 대상 작업이 07~12시에 끝남), 스케줄러 지연 대비 따라잡기 창 12:00~22:00. 화면·문서 문구를 상수(`DAILY_REPORT_TIME_LABEL`)로 통일
+- DevVibe 감시: 루틴 클라우드 세션이 외부 API 호출이 막혀 Heartbeat 대신 **저장소 커밋 감시(`github_commits`)** 모드를 새로 추가. 기본 브랜치에서 지정 문구가 들어간 커밋 = 성공 1회, 예정+유예 안에 커밋 없으면 미실행. DevVibe에 `[자동 갱신]` 필터로 적용 → 상태 ‘정상’. `seed-presets.mjs`가 감시 방식별 소스를 만들도록 수정. 테스트 74개 통과, 운영 배포(버전 `3dfb51f3`)
+- 동기화 지연 해결: 스케줄러가 4~5시간에 한 번 깨는데 회당 3개만 동기화해 프로젝트별 갱신이 ~15시간 밀림(오늘 StrangeRecords·팩폭AI·고정비 실행 미반영). `?phase=sync`(동기화만, 판정·알림은 전체 tick에서) 추가, `scheduler.yml`이 동기화 2회 + 전체 tick 1회를 호출하도록 변경(호출마다 별도 Worker 실행이라 무료 한도 유지). 테스트 75개 통과, 운영 배포(버전 `205ee01a`). 밀린 6개 프로젝트는 연결 테스트로 즉시 동기화 → 9개 모두 최신
+- Routine AUDIT(기술 블로그) 결과 확인: Pages deploy 잡의 ID 토큰 시간 초과(일시 오류) → 실패 job 재실행 권장. 루틴 환경이 workers.dev를 막아 HQ 콜백 실패(프록시 403) — 환경 허용 도메인 추가 필요
+- 맥에서 Playwright E2E 3개 통과. 데모 환경 `SCHEDULER_OIDC_REPOSITORY` 빈 값 명시(wrangler 경고 제거)

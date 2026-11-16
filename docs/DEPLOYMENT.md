@@ -74,7 +74,8 @@ curl -s https://<배포 주소>/api/health/ready
 - `wrangler.jsonc`의 `triggers.crons`는 비우고 `vars.SCHEDULER_OIDC_REPOSITORY = "Logic-Phantom/AutoMateHQ"`로 외부 트리거를 켠다.
 - `.github/workflows/scheduler.yml`이 10분마다 `POST /api/v1/scheduler/tick`을 호출한다.
 - 인증은 GitHub OIDC 토큰(RS256, `aud=automatehq-scheduler`, 저장소·`refs/heads/main`·`scheduler.yml`·이벤트 schedule/workflow_dispatch 검증). 공유 비밀 값 없음.
-- 공개 저장소라 Actions 사용 시간은 무료. 예약 실행은 지연될 수 있어 보고서는 07:00~12:00 KST 사이에 따라잡아 보낸다.
+- 한 번 깨어날 때 `POST /api/v1/scheduler/tick?phase=sync`(GitHub 동기화만, 회당 3개)를 2번 보낸 뒤 전체 `/tick`(동기화·판정·보고서·알림)을 보낸다. 호출마다 별도 Worker 실행이라 무료 플랜 호출당 한도를 넘지 않고, 실행이 드물어도 9개 프로젝트가 모두 갱신된다. 프로젝트가 늘면 `SYNC_ROUNDS`를 올린다.
+- 공개 저장소라 Actions 사용 시간은 무료. 예약 실행은 몇 시간씩 지연될 수 있어(2026-11-16 관측: 4~5시간 간격) 보고서는 12:00~22:00 KST 사이에 따라잡아 보낸다.
 - Cron 슬롯이 생기면 `triggers.crons`를 `["*/10 * * * *"]`로 바꾸고 `SCHEDULER_OIDC_REPOSITORY`를 비운 뒤 워크플로를 끄면 된다.
 
 ## 암호화 키 교체

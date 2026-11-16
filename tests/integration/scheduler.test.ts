@@ -40,8 +40,8 @@ describe('GitHub Actions OIDC 스케줄러 트리거', () => {
       event_name: 'schedule',
       workflow_ref: `${REPO}/.github/workflows/scheduler.yml@refs/heads/main`,
     };
-    const call = (token: string) =>
-      h.app.request('https://hq.example.test/api/v1/scheduler/tick', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }, h.env);
+    const call = (token: string, qs = '') =>
+      h.app.request(`https://hq.example.test/api/v1/scheduler/tick${qs}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }, h.env);
     return { h, kp, claims, call };
   }
 
@@ -50,6 +50,20 @@ describe('GitHub Actions OIDC 스케줄러 트리거', () => {
     const res = await call(await sign(kp, claims));
     expect(res.status).toBe(200);
     expect(((await res.json()) as { data: Record<string, unknown> }).data).toHaveProperty('evaluate');
+  });
+
+  it('phase=sync는 동기화만 하고 판정·보고서·알림은 전체 tick에 맡긴다', async () => {
+    const { kp, claims, call } = await setup();
+    const token = await sign(kp, claims);
+    const sync = ((await (await call(token, '?phase=sync')).json()) as { data: Record<string, unknown> }).data;
+    expect(sync.phase).toBe('sync');
+    expect(sync).toHaveProperty('githubSync');
+    expect(sync).not.toHaveProperty('evaluate');
+    expect(sync).not.toHaveProperty('dailyReport');
+    // 같은 토큰으로 이어서 전체 tick(워크플로가 한 번 깨어날 때 여러 번 호출)
+    const full = ((await (await call(token)).json()) as { data: Record<string, unknown> }).data;
+    expect(full).toHaveProperty('evaluate');
+    expect(full).toHaveProperty('dailyReport');
   });
 
   it('다른 저장소·브랜치·워크플로·대상·만료 토큰은 거부한다', async () => {
