@@ -58,7 +58,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | **Routine 결과 회신 허용(사용자 설정)** | AUDIT 호출·점검은 성공(2026-11-16, 기술 블로그 원인 분석까지 정상). 그러나 루틴 클라우드 환경의 네트워크 정책이 `automatehq.dlacoaud96.workers.dev`를 막아(프록시 403) HQ 콜백 실패 → 대시보드에 계속 ‘시작됨’. claude.ai > Code > 환경 설정에서 루틴이 쓰는 환경의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가 필요. 그전까지는 세션 링크에서 결과 확인 |
 | 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
-| 2-2 | **운영 배포 필요** | `runs.ts` 수정(재실행 대기 중 실패 run의 오류 코드가 지워지던 문제)은 커밋만 됨. `npm run deploy` 필요 |
+| 2-2 | ~~운영 배포 필요~~ 완료 | `runs.ts` 수정(재실행 대기 중 실패 run의 오류 코드 유지) 2026-11-16 배포 완료(버전 50cee018) |
 | 3 | StrangeRecords 오케스트레이터 루틴 — **보류(현재 불필요)** | 2026-11-16 확인: 루틴이 07:07에 `daily-shorts.yml`을 `workflow_dispatch`로 실행하고, HQ는 이 실행을 이미 수집·판정한다(이벤트로 거르지 않음). 루틴이 안 돌면 07:00+120분까지 실행이 없어 ‘미실행’으로 잡힌다. Heartbeat가 더해 줄 것은 **게시 결과(YouTube URL·게시 완료)** 정도이고, 루틴 환경이 workers.dev를 막고 있어 2번(허용 도메인)이 먼저다 |
 | 4 | (선택) GitHub Webhook | 저장소별 Webhook 등록하면 10분 폴링 대신 즉시 반영. Secret은 `.secrets/github-webhook-secret.txt` |
 | 5 | (선택) 게시 상태 연동 | 각 YouTube/Instagram 파이프라인에 publication 이벤트 전송(기존 저장소 수정 필요) |
