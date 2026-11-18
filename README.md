@@ -55,7 +55,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | # | 작업 | 메모 |
 |---|---|---|
-| 0 | **JARVIS 첫 판정 확인** | 연결 테스트 정상·실행 3건 수집 완료(2026-11-18). 상태는 다음 스케줄러 전체 tick에서 ‘확인 불가’ → 판정 결과로 바뀐다. 2026-11-19 06:47 KST 예약 실행이 수집되는지 확인. AI 점검까지 쓰려면 Claude Routine 저장소에도 JARVIS 추가 필요 |
+| 0 | **JARVIS 첫 판정 확인** | 연결 테스트 정상·실행 3건 수집 완료(2026-11-18). 상태는 다음 스케줄러 전체 tick에서 ‘확인 불가’ → 판정 결과로 바뀐다. 2026-11-19 06:47 KST 예약 실행이 수집되는지 확인. Claude Routine 저장소에 JARVIS 추가 완료, 비공개 저장소 실제 접근은 첫 AUDIT 실행에서 확인 필요 |
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | ~~Routine 결과 회신 허용~~ **완료(2026-11-16)** | 루틴이 쓰는 claude.ai 클라우드 환경 `Default`의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(제한됨 모드 유지, 이 도메인 1개만). 다음 AUDIT 호출부터 HQ 콜백이 도착해 대시보드에 결과가 ‘완료’로 표시되는지 확인 필요. `Default` 환경은 다른 루틴(StrangeRecords·DevVibe·FactBokAI)도 쓰므로 이 도메인만 추가했다 |
 | 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
@@ -74,7 +74,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×3 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
 | GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 11개(2026-11-18 JARVIS 추가), Actions RW + Metadata R, **2027-02-13 만료** |
-| Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
+| Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 11개(2026-11-18 JARVIS 추가), HQ 등록명 “데일리”(audit) |
 | 프로젝트 등록 | `node scripts/seed-presets.mjs > .wrangler/presets.sql` → `npx wrangler d1 execute automatehq --remote --file .wrangler/presets.sql` (있는 key는 건너뜀) |
 | 배포 | `npm run deploy` 또는 `npx vite build` → `npx wrangler deploy` |
 
@@ -196,6 +196,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] JARVIS 운영 등록(토큰 저장소 범위 추가 → 배포 → D1 등록, 2026-11-18)
 - [x] JARVIS 연결 테스트 정상·실행 3건 수집(2026-11-18 13:19 KST)
 - [ ] JARVIS 첫 예약 실행 수집·판정 확인(2026-11-19 06:47 KST)
+- [x] Claude Routine 저장소에 JARVIS 추가(2026-11-18, 10개 → 11개)
+- [ ] JARVIS 첫 AUDIT 실행으로 Routine의 비공개 저장소 접근 확인
 - [ ] 블로그 재실행 완료 확인(12:55 기준 대기열)
 - [ ] `runs.ts` 오류 코드 유지 수정 운영 배포
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
@@ -256,3 +258,4 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
   - 검증: typecheck·lint 통과, `npm test` 79개 통과, 프리셋 스키마 검사 통과, 샘플 모드 API에서 등록 제안 10개 확인
   - 운영 배포 완료(버전 `f4176a89`), `/api/health` 200 확인. 사용자가 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 운영 D1에 `jarvis` 1건만 등록(감시 프로젝트 10개)
   - 첫 연결 테스트 404 원인: 토큰 저장소 목록에 JARVIS 누락. 기존 토큰 “AI Automation HQ”에 JARVIS를 추가(10개 → 11개, 권한·만료일·토큰 값 유지)한 뒤 연결 테스트 정상, `daily-brief` 활성, 실행 3건(모두 성공) 수집, 수집 오류·장애 없음. 상태 판정은 다음 전체 tick에서 반영
+  - Claude Routine “AI Automation HQ 읽기 전용 점검”의 저장소에 JARVIS 추가(10개 → 11개). 프롬프트·읽기 전용 규칙·API 토큰·환경은 변경 없음. 실제 점검은 실행하지 않아 비공개 저장소 접근은 첫 AUDIT에서 확인 필요
