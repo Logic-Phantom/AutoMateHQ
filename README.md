@@ -55,7 +55,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | # | 작업 | 메모 |
 |---|---|---|
-| 0 | **JARVIS 연결 테스트** | 토큰 범위 추가·배포·운영 DB 등록 완료(2026-11-18). 첫 수집은 아직 전(`last_synced_at` 없음). 프로젝트 상세의 **연결 테스트**로 즉시 확인하거나 다음 스케줄러 실행을 기다린다. `last_sync_error_code`가 `NOT_FOUND`면 토큰 저장소 범위를 다시 확인. AI 점검까지 쓰려면 Claude Routine 저장소에도 추가 |
+| 0 | **JARVIS 첫 판정 확인** | 연결 테스트 정상·실행 3건 수집 완료(2026-11-18). 상태는 다음 스케줄러 전체 tick에서 ‘확인 불가’ → 판정 결과로 바뀐다. 2026-11-19 06:47 KST 예약 실행이 수집되는지 확인. AI 점검까지 쓰려면 Claude Routine 저장소에도 JARVIS 추가 필요 |
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | ~~Routine 결과 회신 허용~~ **완료(2026-11-16)** | 루틴이 쓰는 claude.ai 클라우드 환경 `Default`의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(제한됨 모드 유지, 이 도메인 1개만). 다음 AUDIT 호출부터 HQ 콜백이 도착해 대시보드에 결과가 ‘완료’로 표시되는지 확인 필요. `Default` 환경은 다른 루틴(StrangeRecords·DevVibe·FactBokAI)도 쓰므로 이 도메인만 추가했다 |
 | 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
@@ -194,7 +194,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Routine 결과 회신 — `Default` 환경 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(2026-11-16). 다음 AUDIT에서 콜백 도착 확인
 - [x] 기술 블로그 Pages 실패 job 재실행 요청(2026-11-16 12:44, GitHub 수락)
 - [x] JARVIS 운영 등록(토큰 저장소 범위 추가 → 배포 → D1 등록, 2026-11-18)
-- [ ] JARVIS 첫 수집 확인(연결 테스트 또는 다음 스케줄러 실행)
+- [x] JARVIS 연결 테스트 정상·실행 3건 수집(2026-11-18 13:19 KST)
+- [ ] JARVIS 첫 예약 실행 수집·판정 확인(2026-11-19 06:47 KST)
 - [ ] 블로그 재실행 완료 확인(12:55 기준 대기열)
 - [ ] `runs.ts` 오류 코드 유지 수정 운영 배포
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
@@ -253,4 +254,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - **JARVIS 감시 추가 준비**: 등록 제안에 `자비스 (JARVIS)` 추가(`daily.yml`, 매일 06:47 KST, 유예 150분, 백업 07:07·07:37). JARVIS 저장소는 수정하지 않음
   - 스케줄러 동기화 전용 호출 2회 → 3회: 회당 3개라 기존 설정으로는 한 번 깨어날 때 9개까지만 갱신돼 10번째 프로젝트가 밀림
   - 검증: typecheck·lint 통과, `npm test` 79개 통과, 프리셋 스키마 검사 통과, 샘플 모드 API에서 등록 제안 10개 확인
-  - 운영 배포 완료(버전 `f4176a89`), `/api/health` 200 확인. 사용자가 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 운영 D1에 `jarvis` 1건만 등록(감시 프로젝트 10개). 첫 수집은 아직 확인 전
+  - 운영 배포 완료(버전 `f4176a89`), `/api/health` 200 확인. 사용자가 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 운영 D1에 `jarvis` 1건만 등록(감시 프로젝트 10개)
+  - 첫 연결 테스트 404 원인: 토큰 저장소 목록에 JARVIS 누락. 기존 토큰 “AI Automation HQ”에 JARVIS를 추가(10개 → 11개, 권한·만료일·토큰 값 유지)한 뒤 연결 테스트 정상, `daily-brief` 활성, 실행 3건(모두 성공) 수집, 수집 오류·장애 없음. 상태 판정은 다음 전체 tick에서 반영
