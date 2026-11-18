@@ -176,10 +176,10 @@ export const API_ERROR_LABEL: Record<ApiErrorCode, string> = {
 };
 
 /**
- * 정기 보고서를 보낼 수 있는 한국 시간 구간. 감시 대상 자동화가 대부분 07:00~12:00에 끝나므로 12:00에 보낸다.
+ * 정기 보고서를 보낼 수 있는 한국 시간 구간. 아침에 받아 보도록 08:00에 보낸다(2026-11-18 12:00 → 08:00 변경).
  * 스케줄러(GitHub Actions cron)가 몇 시간씩 늦을 수 있어 이 시각 전까지 따라잡는다.
  */
-export const DAILY_REPORT_HOUR = 12;
+export const DAILY_REPORT_HOUR = 8;
 export const DAILY_REPORT_CATCHUP_END_HOUR = 22;
 export const DAILY_REPORT_TIME_LABEL = `${String(DAILY_REPORT_HOUR).padStart(2, '0')}:00`;
 export const DAILY_REPORT_WINDOW_LABEL = `${DAILY_REPORT_TIME_LABEL}~${DAILY_REPORT_CATCHUP_END_HOUR}:00`;

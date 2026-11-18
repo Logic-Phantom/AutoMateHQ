@@ -16,7 +16,7 @@
 │  └─ scheduled(): Cron "*/10 * * * *" (UTC)           │
 │       ├─ GitHub Actions 폴링(회당 3개 프로젝트)       │
 │       ├─ 전 프로젝트 판정 + incident 열기/닫기        │
-│       ├─ 12:00~22:00 KST 미발송 일일 보고서 발송      │
+│       ├─ 08:00~22:00 KST 미발송 일일 보고서 발송      │
 │       └─ 장애 즉시 알림(쿨다운)·정리 작업             │
 └───────┬───────────────┬───────────────┬─────────────┘
         │               │               │
@@ -61,12 +61,12 @@
 - 판정 사유가 사라지면 자동 해결(복구). 인증 오류·서명 불일치 같은 이벤트성 incident는 별도 fingerprint(`integration:github:AUTH_INVALID` 등).
 - 즉시 알림: 새 high 이상·심각도 상승·복구만, fingerprint별 쿨다운(기본 3시간), 여러 건을 한 메시지로 묶음.
 
-## 12:00 KST 보고서
+## 08:00 KST 보고서
 
-감시 대상 자동화가 대부분 07:00~12:00 사이에 끝나므로 12:00에 보낸다(2026-11-16 07:00 → 12:00 변경). 시각은 `shared/constants`의 `DAILY_REPORT_HOUR`·`DAILY_REPORT_CATCHUP_END_HOUR` 두 값으로만 정한다.
+아침에 받아 보도록 08:00에 보낸다(2026-11-16 07:00 → 12:00, 2026-11-18 12:00 → 08:00 변경). 시각은 `shared/constants`의 `DAILY_REPORT_HOUR`·`DAILY_REPORT_CATCHUP_END_HOUR` 두 값으로만 정한다.
 
 1. Cron(10분 간격, UTC) → Asia/Seoul 시각 계산
-2. 12:00 ≤ 현지 시각 < 22:00 이고 `daily_reports.report_date_local`에 sent 없음 → 진행(지연 복구)
+2. 08:00 ≤ 현지 시각 < 22:00 이고 `daily_reports.report_date_local`에 sent 없음 → 진행(지연 복구)
 3. 잠금(`job_locks`) → 판정 → 보고서 JSON → 카카오 메시지(200자 이하 한 건)
 4. 토큰 갱신(필요 시) → 나에게 보내기 → 결과를 `daily_reports`·`notification_deliveries`에 기록
 5. 실패 시 다음 Cron에서 재시도(최대 3회). 재인증 필요·미설정은 즉시 종료 상태로 남김.

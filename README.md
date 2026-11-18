@@ -2,12 +2,12 @@
 
 <img src="docs/assets/icon.webp" width="96" alt="AI Automation HQ 아이콘" />
 
-**여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 낮 12시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
+**여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 오전 8시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
 
 유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog·GitHub Pages), GitHub 프로필, 포트폴리오(DevVibe) 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
 > 현재 상태(2026-11-16 12:45 KST): **운영 중** — https://automatehq.dlacoaud96.workers.dev
-> GitHub·카카오톡·Claude Routine 모두 `connected`(Routine 실호출·AUDIT 결과 확인). 프로젝트 9개 모두 동기화(정상 8·실패 1: 기술 블로그 Pages 배포 일시 실패 — 재실행 대기). 첫 정기 보고서 발송 완료(11-16 09:19), 이후 정기 보고서는 **12:00 KST**.
+> GitHub·카카오톡·Claude Routine 모두 `connected`(Routine 실호출·AUDIT 결과 확인). 프로젝트 9개 모두 동기화(정상 8·실패 1: 기술 블로그 Pages 배포 일시 실패 — 재실행 대기). 첫 정기 보고서 발송 완료(11-16 09:19), 이후 정기 보고서는 **08:00 KST**(2026-11-18 12:00 → 08:00 변경).
 > 다음 작업은 바로 아래 **“다음 세션에서 이어서 하기”** 부터.
 
 ## 다음 세션에서 이어서 하기
@@ -40,7 +40,7 @@
    ```
 
    `"event": "schedule"` 실행이 계속 없으면 정기 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
-2. **12:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지. 2026-11-17이 12:00 기준 첫 발송일.
+2. **08:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지. 2026-11-19가 08:00 기준 첫 발송일(스케줄러가 늦으면 22:00 전까지 따라잡음).
 3. **동기화 최신 여부** — 2026-11-16부터 스케줄러가 한 번 깨어날 때 동기화 전용 호출 2회 + 전체 tick 1회를 보내 9개 프로젝트를 모두 갱신한다. 모든 프로젝트의 `last_synced_at`이 같은 시각대인지 확인. 급하면 프로젝트 상세의 **연결 테스트** 버튼이 즉시 동기화한다.
 
 ```bash
@@ -70,7 +70,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 대시보드 | https://automatehq.dlacoaud96.workers.dev (관리자 비밀번호: 로컬 `.secrets/admin-password.txt`, Git 제외) |
 | Cloudflare | Worker `automatehq`, D1 `automatehq`(APAC, id `a00e5b07-…`), 계정 Cron 5개 한도 사용 중 |
 | Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
-| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×2 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 12:00~22:00 KST 따라잡기 |
+| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×2 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
 | GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 10개, Actions RW + Metadata R, **2027-02-13 만료** |
 | Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
@@ -87,13 +87,13 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | 영역 | 내용 |
 |---|---|
-| 관제 대시보드 | 상태 분포 막대, 24시간 실행/실패 + 14일 스파크라인, 14일 실행 결과 누적 막대, 프로젝트별 14일 실행 스트립, 미해결 장애, 실행 타임라인, 다음 예정 작업, 오늘 12:00 보고서 상태 |
+| 관제 대시보드 | 상태 분포 막대, 24시간 실행/실패 + 14일 스파크라인, 14일 실행 결과 누적 막대, 프로젝트별 14일 실행 스트립, 미해결 장애, 실행 타임라인, 다음 예정 작업, 오늘 08:00 보고서 상태 |
 | 프로젝트 관리 | 등록·수정·비활성·soft delete, 기존 저장소 등록 제안, 기대 일정(매일·평일·요일·N시간·비정기)·유예 시간·중요도, 연결 테스트(워크플로 비활성/삭제 감지), Heartbeat 키 발급·재발급·폐기, 유지보수 허용 범위 |
 | GitHub | Fine-grained PAT(암호화 저장), Actions 실행 폴링, `workflow_run` Webhook(HMAC·중복 차단), 401/403/404/rate limit 분류, **승인 기반 실패 job 재실행**(확인 문구·idempotency·직전 상태 재확인) |
 | Heartbeat | `start/complete/fail/events` 서명 API(HMAC + timestamp + nonce), Node·Python 예제 |
 | 게시 추적 | YouTube/Instagram 단계(planned→published/failed), 파이프라인 성공과 게시 완료 분리, “게시 완료 보고됨” vs “공식 API 검증” 구분 |
 | 판정·장애 | NORMAL/FAILED/ATTENTION/UNKNOWN, 예정일·유예·기준선 반영 미실행 탐지, 수집 실패 구분, fingerprint 묶음·자동 복구, 즉시 알림 쿨다운 |
-| 카카오톡 | OAuth(state), 토큰 암호화·자동 갱신·회전, 재연결 필요 감지, 테스트 메시지, **12:00 KST 정기 보고서**(날짜별 1회, 22:00까지 지연 복구, 3회 재시도), 장애 즉시 알림 |
+| 카카오톡 | OAuth(state), 토큰 암호화·자동 갱신·회전, 재연결 필요 감지, 테스트 메시지, **08:00 KST 정기 보고서**(날짜별 1회, 22:00까지 지연 복구, 3회 재시도), 장애 즉시 알림 |
 | AI 유지보수 | Claude Code Routine fire 어댑터(공식 계약), AUDIT/PROPOSE/DRAFT_PR 정책, 결과 회신(작업별 토큰), 테스트 미통과 PR은 “검토 필요”, 미연결 시 규칙 기반 점검 |
 | 비용·사용량 | GitHub Actions 실행 시간 막대 차트, ACTUAL/ESTIMATED/MANUAL/UNAVAILABLE 구분, 수동 기록 |
 | 보안 | 관리자 로그인(PBKDF2)·세션 쿠키·CSRF·호출 제한·AES-GCM·마스킹·감사 로그·보안 헤더 |
@@ -149,7 +149,7 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 | 기획서 | 문제 | 반영 |
 |---|---|---|
 | 07:00 보고서를 한 통의 긴 카카오 메시지로 | 기본 텍스트 템플릿 **text 최대 200자**(공식 문서) | 핵심만 담은 1통(≤200자, 제목/건수/문제 프로젝트/한줄 분석을 빈 줄로 구분) + “HQ에서 보기” 버튼 → 전체 보고서 페이지 |
-| Cron `0 22 * * *` 단일 실행 | Cron 지연·누락 시 그날 보고서가 사라짐, 무료 계정 Cron 5개 제한 | 표현식 1개 `*/10 * * * *`로 07:00~12:00 KST 사이 미발송분 따라잡기 + 날짜 UNIQUE로 중복 방지(기존 브리핑의 07:07+백업 cron 교훈) |
+| Cron `0 22 * * *` 단일 실행 | Cron 지연·누락 시 그날 보고서가 사라짐, 무료 계정 Cron 5개 제한 | 표현식 1개 `*/10 * * * *`로 08:00~22:00 KST 사이 미발송분 따라잡기 + 날짜 UNIQUE로 중복 방지(기존 브리핑의 07:07+백업 cron 교훈) |
 | 관리자 비밀번호를 Secret에 보관 | 평문 비밀번호가 Secret에 있음 | PBKDF2 해시만 Secret에 보관(`npm run secret:password`) |
 | 카카오 연결 해제 | 같은 카카오 앱을 쓰는 기존 브리핑 프로젝트까지 unlink로 끊길 위험 | unlink 미사용. 로컬 삭제 또는 logout(이 토큰만). HQ 전용 앱 권장 |
 | refresh token 응답마다 교체 | 공식 문서: 만료 1개월 미만일 때만 새 값 포함 | 응답에 있을 때만 교체, 만료 예정일 표시 |
@@ -184,7 +184,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Routine Fire URL·토큰을 HQ 연동 설정 > Claude Code Routines에 등록(용도 audit, 표시 이름 “데일리”) — `connected`
 - [x] GitHub `schedule` 예약 실행 시작 확인(2026-11-16 00:45·05:35·09:19 KST) — 단, 간격이 4~5시간이라 Cloudflare Cron 복구 검토 필요
 - [x] 정기 보고서 시각 12:00로 변경, 따라잡기 창 12:00~22:00(2026-11-16)
-- [ ] 정기 보고서 12:00대 정시 발송 — 스케줄러 지연이 계속되면 Cloudflare Cron 복구
+- [x] 정기 보고서 시각 08:00로 변경, 따라잡기 창 08:00~22:00(2026-11-18)
+- [ ] 정기 보고서 08:00대 정시 발송 — 스케줄러 지연이 계속되면 Cloudflare Cron 복구
 - [x] 맥 환경: `npx wrangler login` 완료(관리자 비밀번호는 암호 관리자로 공유)
 - [x] 감시 프로젝트 9개 전체 동기화 완료(2026-11-16 12:39, 스케줄러 회당 전체 동기화로 개선)
 - [x] DevVibe: 저장소 커밋 감시(`[자동 갱신]`)로 연결 — 09:06 커밋 수집, 상태 ‘정상’(루틴 수정 없음)
@@ -241,3 +242,7 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
   - 검증: typecheck·lint 통과, `npm test` 79개 통과(skeleton·차트 토큰 테스트 2개 추가), E2E 3개 통과, `vite build` 성공. 샘플 모드에서 데스크톱(1440)·모바일(375) 화면 확인(가로 스크롤 없음). 보고서 화면 확인을 위해 **로컬 데모 DB**에 오늘 보고서 1건 생성(샘플 모드라 미발송)
   - 운영 배포 완료(버전 `c20c8dd4`, 원격 D1 migration 변경 없음). 운영 주소가 새 CSS(`index-DeGNWnV7.css`)를 내보내고 새 토큰(`--color-kakao`·`--text-metric`·`overflow-x: clip`)이 들어 있는 것과 `/api/health` 200 확인. 로그인 후 화면은 운영에서 직접 보지 않음(샘플 모드로 확인)
   - 그대로 둔 것: Prettier 경고 23개 파일은 이번 수정 전부터 있던 것으로 손대지 않음
+
+### 2026-11-18
+- 정기 보고서 12:00 → **08:00 KST**로 변경(사용자 요청: 12시는 늦음). `DAILY_REPORT_HOUR` 상수 하나만 바꾸고 따라잡기 끝(22:00)은 유지 → 창 08:00~22:00. 화면 문구는 상수(`DAILY_REPORT_TIME_LABEL`)라 자동 반영, 문서·워크플로 주석 갱신. 테스트(8시 이전·22시 이후 미발송)를 08:00 기준으로 수정, 79개 통과
+  - 참고: 08:00에는 09:00·12:00 예정 작업(GitHub 프로필 등)이 아직 실행 전이라 보고서에 ‘예정’으로 잡힐 수 있다. GitHub 예약 실행 지연(4~5시간)이 계속되면 실제 수신은 08시보다 늦을 수 있다

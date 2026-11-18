@@ -1,5 +1,5 @@
 // AI Automation HQ — Cloudflare Worker 설정
-// - Cron Trigger는 UTC 기준이다. 10분마다 한 번 깨어나 내부 작업(동기화·판정·07:00 KST 보고서)을 처리한다.
+// - Cron Trigger는 UTC 기준이다. 10분마다 한 번 깨어나 내부 작업(동기화·판정·08:00 KST 보고서)을 처리한다.
 //   무료 플랜은 계정당 Cron Trigger 5개 제한이 있어 표현식 1개만 쓴다.
 // - 비밀 값(ADMIN_PASSWORD_HASH, HQ_ENCRYPTION_KEY, GITHUB_WEBHOOK_SECRET, KAKAO_REST_API_KEY, KAKAO_CLIENT_SECRET)은
 //   `wrangler secret put` 으로만 넣는다. 이 파일에 적지 않는다.

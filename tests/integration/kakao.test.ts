@@ -137,10 +137,10 @@ describe('카카오 토큰 갱신', () => {
   });
 });
 
-describe('12:00 정기 보고서', () => {
+describe('08:00 정기 보고서', () => {
   it('발송 성공/실패 이력을 저장하고 같은 날짜에는 중복 발송하지 않는다', async () => {
     const k = kakaoServer();
-    // 2026-11-16 12:05 KST
+    // 2026-11-16 12:05 KST(08:00~22:00 따라잡기 창 안)
     const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-16T03:05:00Z') });
     await connected(h);
     const first = await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' });
@@ -156,14 +156,14 @@ describe('12:00 정기 보고서', () => {
     expect(h.db.count('notification_deliveries', `notification_type='daily_report' AND status='sent'`)).toBe(1);
   });
 
-  it('12시 이전·22시 이후에는 보내지 않고, 실패하면 이력을 남긴 뒤 다음 cron에서 재시도한다', async () => {
+  it('8시 이전·22시 이후에는 보내지 않고, 실패하면 이력을 남긴 뒤 다음 cron에서 재시도한다', async () => {
     const k = kakaoServer({ sendStatus: 500 });
-    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-16T02:50:00Z') }); // 11:50 KST
+    const h = await createHarness({ fetch: k.fn, now: new Date('2026-11-15T22:50:00Z') }); // 11-16 07:50 KST
     await connected(h);
     expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('skipped');
     h.clock.now = new Date('2026-11-16T13:00:00Z'); // 22:00 KST — 따라잡기 창 밖
     expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('skipped');
-    h.clock.now = new Date('2026-11-16T03:00:00Z');
+    h.clock.now = new Date('2026-11-15T23:00:00Z'); // 08:00 KST
     expect((await runDailyReport(h.env, h.db, h.deps, { trigger: 'cron' })).action).toBe('failed');
     expect(h.db.get<{ status: string; attempt_count: number }>(`SELECT status, attempt_count FROM daily_reports`)).toEqual({ status: 'failed', attempt_count: 1 });
     expect(h.db.count('notification_deliveries', `status='failed'`)).toBe(1);
