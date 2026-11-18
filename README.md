@@ -259,4 +259,5 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
   - 운영 배포 완료(버전 `f4176a89`), `/api/health` 200 확인. 사용자가 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 운영 D1에 `jarvis` 1건만 등록(감시 프로젝트 10개)
   - 첫 연결 테스트 404 원인: 토큰 저장소 목록에 JARVIS 누락. 기존 토큰 “AI Automation HQ”에 JARVIS를 추가(10개 → 11개, 권한·만료일·토큰 값 유지)한 뒤 연결 테스트 정상, `daily-brief` 활성, 실행 3건(모두 성공) 수집, 수집 오류·장애 없음. 상태 판정은 다음 전체 tick에서 반영
   - Claude Routine “AI Automation HQ 읽기 전용 점검”의 저장소에 JARVIS 추가(10개 → 11개). 프롬프트·읽기 전용 규칙·API 토큰·환경은 변경 없음
-  - JARVIS 첫 AUDIT 완료(job 3): 비공개 저장소 clone·Actions 로그 조회·HQ 결과 회신 정상. 최근 실행 10건 성공, pytest 77개·ruff 통과. 발견 5건(medium 2·low 2·info 1): 비공개 확인 실패 시 브리핑을 건너뛰고도 실행은 성공으로 표시, 예약 실행 미검증 등. JARVIS 저장소는 수정하지 않음
+  - JARVIS 첫 AUDIT 완료(job 3): 비공개 저장소 clone·Actions 로그 조회·HQ 결과 회신 정상. 최근 실행 10건 성공, pytest 77개·ruff 통과. 발견 5건(medium 2·low 2·info 1): 비공개 확인 실패 시 브리핑을 건너뛰고도 실행은 성공으로 표시, 예약 실행 미검증 등
+  - 위 첫 항목을 사용자 요청으로 JARVIS에서 수정·푸시(`9e882a0`): 일시 오류는 3번까지 재시도하고, 비공개가 확인되지 않아 브리핑을 건너뛰면 실행을 실패로 끝내 HQ가 감지한다. 테스트 90개·ruff·GitHub CI 통과. 나머지 발견 사항은 미조치
