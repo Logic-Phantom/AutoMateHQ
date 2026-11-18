@@ -55,7 +55,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | # | 작업 | 메모 |
 |---|---|---|
-| 0 | **JARVIS 운영 등록** | 순서 중요. ① GitHub 토큰 “AI Automation HQ”의 저장소 범위에 `JARVIS` 추가(비공개 저장소라 없으면 404 수집 오류·장애 알림 발생) ② `npm run deploy` ③ 대시보드 **기존 저장소에서 추가**로 등록(또는 위 “프로젝트 등록” 명령) ④ **연결 테스트**. AI 점검까지 쓰려면 Claude Routine 저장소에도 추가 |
+| 0 | **JARVIS 연결 테스트** | 토큰 범위 추가·배포·운영 DB 등록 완료(2026-11-18). 첫 수집은 아직 전(`last_synced_at` 없음). 프로젝트 상세의 **연결 테스트**로 즉시 확인하거나 다음 스케줄러 실행을 기다린다. `last_sync_error_code`가 `NOT_FOUND`면 토큰 저장소 범위를 다시 확인. AI 점검까지 쓰려면 Claude Routine 저장소에도 추가 |
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | ~~Routine 결과 회신 허용~~ **완료(2026-11-16)** | 루틴이 쓰는 claude.ai 클라우드 환경 `Default`의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(제한됨 모드 유지, 이 도메인 1개만). 다음 AUDIT 호출부터 HQ 콜백이 도착해 대시보드에 결과가 ‘완료’로 표시되는지 확인 필요. `Default` 환경은 다른 루틴(StrangeRecords·DevVibe·FactBokAI)도 쓰므로 이 도메인만 추가했다 |
 | 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
@@ -73,7 +73,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
 | 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×3 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
-| GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 10개, Actions RW + Metadata R, **2027-02-13 만료** |
+| GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 11개(2026-11-18 JARVIS 추가), Actions RW + Metadata R, **2027-02-13 만료** |
 | Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
 | 프로젝트 등록 | `node scripts/seed-presets.mjs > .wrangler/presets.sql` → `npx wrangler d1 execute automatehq --remote --file .wrangler/presets.sql` (있는 key는 건너뜀) |
 | 배포 | `npm run deploy` 또는 `npx vite build` → `npx wrangler deploy` |
@@ -193,7 +193,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Claude Routine 첫 AUDIT 호출 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 재호출 세션 생성·점검 완료
 - [x] Routine 결과 회신 — `Default` 환경 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(2026-11-16). 다음 AUDIT에서 콜백 도착 확인
 - [x] 기술 블로그 Pages 실패 job 재실행 요청(2026-11-16 12:44, GitHub 수락)
-- [ ] JARVIS 운영 등록(토큰 저장소 범위 추가 → 배포 → 등록 → 연결 테스트)
+- [x] JARVIS 운영 등록(토큰 저장소 범위 추가 → 배포 → D1 등록, 2026-11-18)
+- [ ] JARVIS 첫 수집 확인(연결 테스트 또는 다음 스케줄러 실행)
 - [ ] 블로그 재실행 완료 확인(12:55 기준 대기열)
 - [ ] `runs.ts` 오류 코드 유지 수정 운영 배포
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
@@ -252,4 +253,4 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - **JARVIS 감시 추가 준비**: 등록 제안에 `자비스 (JARVIS)` 추가(`daily.yml`, 매일 06:47 KST, 유예 150분, 백업 07:07·07:37). JARVIS 저장소는 수정하지 않음
   - 스케줄러 동기화 전용 호출 2회 → 3회: 회당 3개라 기존 설정으로는 한 번 깨어날 때 9개까지만 갱신돼 10번째 프로젝트가 밀림
   - 검증: typecheck·lint 통과, `npm test` 79개 통과, 프리셋 스키마 검사 통과, 샘플 모드 API에서 등록 제안 10개 확인
-  - 운영 미반영: Worker 배포·D1 등록은 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 진행
+  - 운영 배포 완료(버전 `f4176a89`), `/api/health` 200 확인. 사용자가 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 운영 D1에 `jarvis` 1건만 등록(감시 프로젝트 10개). 첫 수집은 아직 확인 전
