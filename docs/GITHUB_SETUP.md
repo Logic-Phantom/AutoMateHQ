@@ -21,7 +21,7 @@ GitHub → Settings → Developer settings → Fine-grained tokens → Generate 
 
 ## 2. 프로젝트 등록
 
-**프로젝트 > 기존 저장소에서 추가**에 기존 자동화 저장소(StrangeRecords, FactBokAI, CHIPLY, SubscriptionRadar, FixedCost, TechLog, lunchagree)의 워크플로·cron을 참고한 등록 제안이 있다. 선택 후 확인해야 저장된다. 등록 후 상세 화면의 **연결 테스트**로 저장소 접근·워크플로 활성 상태·최근 실행 수집을 확인한다.
+**프로젝트 > 기존 저장소에서 추가**에 기존 자동화 저장소(StrangeRecords, FactBokAI, CHIPLY, SubscriptionRadar, FixedCost, TechLog, JARVIS 등)의 워크플로·cron을 참고한 등록 제안이 있다. 선택 후 확인해야 저장된다. 등록 후 상세 화면의 **연결 테스트**로 저장소 접근·워크플로 활성 상태·최근 실행 수집을 확인한다.
 
 기존 브리핑 프로젝트는 07:07 + 백업(07:37/08:07/09:07) cron을 쓰므로 유예 시간을 120~150분으로 잡았다.
 

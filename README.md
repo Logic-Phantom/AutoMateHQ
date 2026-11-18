@@ -4,7 +4,7 @@
 
 **여러 GitHub 저장소와 자동화 작업을 한곳에서 감시·운영하고, 매일 오전 8시(한국 시간) 카카오톡 ‘나와의 채팅’으로 운영 보고서를 보내는 개인용 관제 시스템.**
 
-유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비 브리핑(CHIPLY·SubscriptionRadar·FixedCost), 블로그(TechLog·GitHub Pages), GitHub 프로필, 포트폴리오(DevVibe) 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
+유튜브 쇼츠(StrangeRecords), 인스타그램 카드(FactBokAI), 반도체·청약·고정비·날씨 브리핑(CHIPLY·SubscriptionRadar·FixedCost·JARVIS), 블로그(TechLog·GitHub Pages), GitHub 프로필, 포트폴리오(DevVibe) 등 기존 프로젝트를 **수정하지 않고** GitHub API·Webhook·Heartbeat 계약으로 연결한다.
 
 > 현재 상태(2026-11-16 12:45 KST): **운영 중** — https://automatehq.dlacoaud96.workers.dev
 > GitHub·카카오톡·Claude Routine 모두 `connected`(Routine 실호출·AUDIT 결과 확인). 프로젝트 9개 모두 동기화(정상 8·실패 1: 기술 블로그 Pages 배포 일시 실패 — 재실행 대기). 첫 정기 보고서 발송 완료(11-16 09:19), 이후 정기 보고서는 **08:00 KST**(2026-11-18 12:00 → 08:00 변경).
@@ -41,7 +41,7 @@
 
    `"event": "schedule"` 실행이 계속 없으면 정기 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
 2. **08:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지. 2026-11-19가 08:00 기준 첫 발송일(스케줄러가 늦으면 22:00 전까지 따라잡음).
-3. **동기화 최신 여부** — 2026-11-16부터 스케줄러가 한 번 깨어날 때 동기화 전용 호출 2회 + 전체 tick 1회를 보내 9개 프로젝트를 모두 갱신한다. 모든 프로젝트의 `last_synced_at`이 같은 시각대인지 확인. 급하면 프로젝트 상세의 **연결 테스트** 버튼이 즉시 동기화한다.
+3. **동기화 최신 여부** — 스케줄러가 한 번 깨어날 때 동기화 전용 호출 3회 + 전체 tick 1회를 보내 최대 12개 프로젝트를 갱신한다(2026-11-18 JARVIS 추가로 2회 → 3회). 모든 프로젝트의 `last_synced_at`이 같은 시각대인지 확인. 급하면 프로젝트 상세의 **연결 테스트** 버튼이 즉시 동기화한다.
 
 ```bash
 npx wrangler d1 execute automatehq --remote --command "SELECT project_key, last_status, last_status_reason, last_synced_at FROM projects WHERE deleted_at IS NULL"
@@ -55,6 +55,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 
 | # | 작업 | 메모 |
 |---|---|---|
+| 0 | **JARVIS 운영 등록** | 순서 중요. ① GitHub 토큰 “AI Automation HQ”의 저장소 범위에 `JARVIS` 추가(비공개 저장소라 없으면 404 수집 오류·장애 알림 발생) ② `npm run deploy` ③ 대시보드 **기존 저장소에서 추가**로 등록(또는 위 “프로젝트 등록” 명령) ④ **연결 테스트**. AI 점검까지 쓰려면 Claude Routine 저장소에도 추가 |
 | 1 | ~~DevVibe Heartbeat 연결~~ → **완료(커밋 감시로 대체)** | 루틴이 매일 `[자동 갱신]` 커밋을 남기므로 HQ가 커밋으로 감시. 루틴 수정·secret 불필요(docs/GITHUB_SETUP.md “저장소 커밋 감시”) |
 | 2 | ~~Routine 결과 회신 허용~~ **완료(2026-11-16)** | 루틴이 쓰는 claude.ai 클라우드 환경 `Default`의 네트워크 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(제한됨 모드 유지, 이 도메인 1개만). 다음 AUDIT 호출부터 HQ 콜백이 도착해 대시보드에 결과가 ‘완료’로 표시되는지 확인 필요. `Default` 환경은 다른 루틴(StrangeRecords·DevVibe·FactBokAI)도 쓰므로 이 도메인만 추가했다 |
 | 2-1 | **기술 블로그 재실행 결과 확인** | AUDIT 결과: run 43744493969 deploy 잡이 `actions/deploy-pages` ID 토큰 요청 시간 초과(일시적 외부 오류, 직전 7회 성공). 2026-11-16 12:44 HQ에서 실패 job 재실행 요청 → GitHub 201 수락, **12:55까지 GitHub 대기열(queued)**. 끝나면 HQ가 다음 동기화에서 반영한다. 계속 queued면 GitHub Actions 화면에서 확인·취소 후 다시 실행. 사이트는 이전 버전으로 정상 응답(200) |
@@ -70,7 +71,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 대시보드 | https://automatehq.dlacoaud96.workers.dev (관리자 비밀번호: 로컬 `.secrets/admin-password.txt`, Git 제외) |
 | Cloudflare | Worker `automatehq`, D1 `automatehq`(APAC, id `a00e5b07-…`), 계정 Cron 5개 한도 사용 중 |
 | Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
-| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×2 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
+| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×3 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
 | GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 10개, Actions RW + Metadata R, **2027-02-13 만료** |
 | Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 10개, HQ 등록명 “데일리”(audit) |
@@ -192,6 +193,7 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] Claude Routine 첫 AUDIT 호출 — 2026-11-16 첫 호출이 ‘네트워크’ 실패: Workers fetch가 `redirect: 'error'`를 지원하지 않아 호출 전 TypeError. `manual`+3xx 거부로 수정·배포 → 재호출 세션 생성·점검 완료
 - [x] Routine 결과 회신 — `Default` 환경 허용 도메인에 `automatehq.dlacoaud96.workers.dev` 추가(2026-11-16). 다음 AUDIT에서 콜백 도착 확인
 - [x] 기술 블로그 Pages 실패 job 재실행 요청(2026-11-16 12:44, GitHub 수락)
+- [ ] JARVIS 운영 등록(토큰 저장소 범위 추가 → 배포 → 등록 → 연결 테스트)
 - [ ] 블로그 재실행 완료 확인(12:55 기준 대기열)
 - [ ] `runs.ts` 오류 코드 유지 수정 운영 배포
 - [ ] (선택) 저장소 Webhook — Secret은 로컬 `.secrets/github-webhook-secret.txt`
@@ -247,3 +249,7 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - 정기 보고서 12:00 → **08:00 KST**로 변경(사용자 요청: 12시는 늦음). `DAILY_REPORT_HOUR` 상수 하나만 바꾸고 따라잡기 끝(22:00)은 유지 → 창 08:00~22:00. 화면 문구는 상수(`DAILY_REPORT_TIME_LABEL`)라 자동 반영, 문서·워크플로 주석 갱신. 테스트(8시 이전·22시 이후 미발송)를 08:00 기준으로 수정, 79개 통과
   - 참고: 08:00에는 09:00·12:00 예정 작업(GitHub 프로필 등)이 아직 실행 전이라 보고서에 ‘예정’으로 잡힐 수 있다. GitHub 예약 실행 지연(4~5시간)이 계속되면 실제 수신은 08시보다 늦을 수 있다
 - 운영 배포 완료(버전 `8b44d950`, 원격 D1 migration 변경 없음). `/api/health` 200 확인. 2026-11-19부터 08:00 기준 발송
+- **JARVIS 감시 추가 준비**: 등록 제안에 `자비스 (JARVIS)` 추가(`daily.yml`, 매일 06:47 KST, 유예 150분, 백업 07:07·07:37). JARVIS 저장소는 수정하지 않음
+  - 스케줄러 동기화 전용 호출 2회 → 3회: 회당 3개라 기존 설정으로는 한 번 깨어날 때 9개까지만 갱신돼 10번째 프로젝트가 밀림
+  - 검증: typecheck·lint 통과, `npm test` 79개 통과, 프리셋 스키마 검사 통과, 샘플 모드 API에서 등록 제안 10개 확인
+  - 운영 미반영: Worker 배포·D1 등록은 GitHub 토큰에 JARVIS 저장소를 추가한 뒤 진행

@@ -188,4 +188,23 @@ export const PROJECT_PRESETS: ProjectPreset[] = [
       priority: 'low',
     },
   },
+  {
+    presetId: 'jarvis',
+    hint: 'daily.yml · 06:47 KST + 백업 07:07/07:37 · 날씨·주간 이슈 카카오 브리핑(비공개 저장소)',
+    input: {
+      projectKey: 'jarvis',
+      name: '자비스 (JARVIS)',
+      description: '매일 아침 날씨·우산·옷차림과 최근 7일 주요 이슈 카카오 브리핑',
+      category: 'briefing',
+      repoOwner: 'Logic-Phantom',
+      repoName: 'JARVIS',
+      monitoringMode: 'github_actions',
+      workflowFile: 'daily.yml',
+      workflowEvent: 'schedule',
+      expectedCadence: 'daily',
+      expectedTimeLocal: '06:47',
+      gracePeriodMinutes: 150,
+      priority: 'normal',
+    },
+  },
 ];

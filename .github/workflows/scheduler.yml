@@ -28,8 +28,8 @@ jobs:
       - name: HQ 스케줄러 호출
         env:
           HQ_URL: https://automatehq.dlacoaud96.workers.dev
-          # 감시 프로젝트 9개 ÷ 회당 3개 ≈ 3회. 동기화 전용 2회 + 전체 tick 1회(여기서도 3개 동기화)
-          SYNC_ROUNDS: '2'
+          # 감시 프로젝트 10개 ÷ 회당 3개 → 4회 필요. 동기화 전용 3회 + 전체 tick 1회(여기서도 3개 동기화) = 최대 12개
+          SYNC_ROUNDS: '3'
         run: |
           set -euo pipefail
           token=$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
