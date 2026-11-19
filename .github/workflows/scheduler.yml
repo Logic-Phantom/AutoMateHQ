@@ -1,7 +1,7 @@
 name: hq-scheduler
 
-# Cloudflare 무료 계정의 Cron 5개 한도를 다른 Worker가 사용 중이라,
-# 이 워크플로가 10분마다 HQ 스케줄러(동기화·판정·08:00 KST 보고서·알림)를 깨운다.
+# 백업 스케줄러. 주 스케줄러는 Worker의 Durable Object 알람(worker/src/scheduler/alarm.ts)이다(2026-11-19 전환).
+# 이 워크플로도 HQ 스케줄러(동기화·판정·08:00 KST 보고서·알림)를 깨우며, 중복 실행은 HQ의 잠금과 날짜 UNIQUE가 막는다.
 # 비밀 값은 쓰지 않는다. GitHub OIDC 토큰(저장소·브랜치·워크플로 파일이 서명에 포함)으로만 인증한다.
 # GitHub 예약 실행은 몇 시간씩 지연될 수 있다(2026-11-16 관측: 4~5시간 간격). 그래서 한 번 깨어날 때
 # 동기화 전용 호출(phase=sync, 회당 3개 프로젝트)을 SYNC_ROUNDS번 보낸 뒤 전체 tick을 보내 모든 프로젝트를 최신으로 만든다.

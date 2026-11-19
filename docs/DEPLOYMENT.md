@@ -67,10 +67,12 @@ curl -s https://<배포 주소>/api/health/ready
 
 `ready`가 200이면 DB·암호화 키·관리자 비밀번호가 준비된 것이다. 이후 대시보드의 **연동 설정 > 온보딩 체크리스트**를 따라간다.
 
-## 스케줄러: Cloudflare Cron 대신 GitHub Actions(현재 구성)
+## 스케줄러: Durable Object 알람(주) + GitHub Actions(백업)
 
-이 계정은 무료 플랜 Cron 5개를 다른 Worker가 모두 쓰고 있어 `wrangler deploy` 때 Cron 등록이 실패한다(code 10072). 그래서:
+이 계정은 무료 플랜 Cron 5개를 다른 Worker가 모두 쓰고 있어 `wrangler deploy` 때 Cron 등록이 실패한다(code 10072). GitHub 예약 실행은 4~9시간씩 밀려 08:00 보고서를 맞추지 못했다. 그래서 2026-11-19부터:
 
+- `SchedulerAlarm` Durable Object(SQLite, 무료 플랜 가능)가 10분 경계마다 `runScheduledTick`을 실행하고 다음 알람을 건다. 배포 후 첫 API 요청(예: `/api/health`)이 알람을 건다.
+- 아래 GitHub Actions 구성은 백업으로 유지한다. 중복 실행은 스케줄러 잠금과 보고서 날짜 UNIQUE가 막는다.
 - `wrangler.jsonc`의 `triggers.crons`는 비우고 `vars.SCHEDULER_OIDC_REPOSITORY = "Logic-Phantom/AutoMateHQ"`로 외부 트리거를 켠다.
 - `.github/workflows/scheduler.yml`이 10분마다 `POST /api/v1/scheduler/tick`을 호출한다.
 - 인증은 GitHub OIDC 토큰(RS256, `aud=automatehq-scheduler`, 저장소·`refs/heads/main`·`scheduler.yml`·이벤트 schedule/workflow_dispatch 검증). 공유 비밀 값 없음.

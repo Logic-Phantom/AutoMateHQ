@@ -12,6 +12,11 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   /** GitHub Actions 예약 워크플로가 스케줄러를 깨울 때 허용할 저장소(owner/name). 비우면 외부 트리거 비활성. */
   SCHEDULER_OIDC_REPOSITORY?: string;
+  /** 10분마다 스케줄러를 깨우는 Durable Object. 샘플 모드에는 없다. */
+  SCHEDULER_ALARM?: {
+    idFromName(name: string): unknown;
+    get(id: unknown): { fetch(input: string): Promise<Response> };
+  };
 
   // ---- secrets ----
   /** `npm run secret:password` 로 만든 PBKDF2 해시. 평문 비밀번호는 어디에도 저장하지 않는다. */

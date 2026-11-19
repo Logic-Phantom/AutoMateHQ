@@ -33,14 +33,8 @@
 
 ### 1. 먼저 확인할 것(순서대로)
 
-1. **GitHub 예약 실행 간격** — 2026-11-16 확인: `schedule` 실행이 **10분 간격이 아니라 00:45·05:35·09:19 KST 3번뿐**(4~5시간 간격). 첫 보고서(당시 07:00 기준)가 09:19에 지연 발송됐다. → **보고서를 12:00로 옮기고 따라잡기 창을 12:00~22:00으로 넓혔다.** 그래도 창 안에 tick이 없으면 빠지므로 Cloudflare Cron 복구(아래 대안)가 근본 해결.
-
-   ```bash
-   curl -s "https://api.github.com/repos/Logic-Phantom/AutoMateHQ/actions/workflows/scheduler.yml/runs?per_page=10"
-   ```
-
-   `"event": "schedule"` 실행이 계속 없으면 정기 보고서도 안 나간다. 대안: Actions 탭에서 수동 실행 / 다른 Worker의 Cloudflare Cron을 하나 정리해 `wrangler.jsonc`의 `triggers.crons`를 `["*/10 * * * *"]`로 복구(docs/DEPLOYMENT.md “스케줄러”).
-2. **08:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports` 상태가 `sent`인지. 2026-11-19가 08:00 기준 첫 발송일(스케줄러가 늦으면 22:00 전까지 따라잡음).
+1. **스케줄러 알람 동작** — 2026-11-19부터 주 스케줄러는 Durable Object 알람(`SchedulerAlarm`, 10분 경계)이다. GitHub Actions 예약 실행은 4~9시간씩 밀려 백업으로만 둔다. 프로젝트의 `last_synced_at`이 10~40분 안쪽이면 정상이다(아래 첫 번째 조회).
+2. **08:00 정기 보고서 수신** — 카카오톡 ‘나와의 채팅’ + 아래 DB 조회로 `daily_reports`의 `sent_at`이 **2026-11-19T23:00Z(11-20 08:00 KST) 직후**인지 확인한다. 2026-11-20이 알람 기준 첫 정시 발송일이다.
 3. **동기화 최신 여부** — 스케줄러가 한 번 깨어날 때 동기화 전용 호출 3회 + 전체 tick 1회를 보내 최대 12개 프로젝트를 갱신한다(2026-11-18 JARVIS 추가로 2회 → 3회). 모든 프로젝트의 `last_synced_at`이 같은 시각대인지 확인. 급하면 프로젝트 상세의 **연결 테스트** 버튼이 즉시 동기화한다.
 
 ```bash
@@ -71,7 +65,7 @@ npx wrangler d1 execute automatehq --remote --command "SELECT report_date_local,
 | 대시보드 | https://automatehq.dlacoaud96.workers.dev (관리자 비밀번호: 로컬 `.secrets/admin-password.txt`, Git 제외) |
 | Cloudflare | Worker `automatehq`, D1 `automatehq`(APAC, id `a00e5b07-…`), 계정 Cron 5개 한도 사용 중 |
 | Cloudflare Secrets | `ADMIN_PASSWORD_HASH` `HQ_ENCRYPTION_KEY` `GITHUB_WEBHOOK_SECRET` `KAKAO_REST_API_KEY` `KAKAO_CLIENT_SECRET` |
-| 스케줄러 | `.github/workflows/scheduler.yml`(10분 예약, 실제 4~5시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×3 + `/tick` ×1, GitHub OIDC 인증(비밀 값 없음). 정기 보고서 08:00~22:00 KST 따라잡기 |
+| 스케줄러 | 주: Durable Object 알람 `SchedulerAlarm`(10분 경계, `worker/src/scheduler/alarm.ts`). 백업: `.github/workflows/scheduler.yml`(실제 4~9시간 간격) → `POST /api/v1/scheduler/tick?phase=sync` ×3 + `/tick` ×1, GitHub OIDC 인증. 정기 보고서 08:00~22:00 KST 따라잡기 |
 | 카카오 | Kakao Developers 앱 “AI Automation HQ” ID 1651324, 토큰 D1 암호화 저장, refresh 만료 2027-01-14(매일 발송되면 자동 연장) |
 | GitHub 토큰 | Fine-grained “AI Automation HQ”, 저장소 11개(2026-11-18 JARVIS 추가), Actions RW + Metadata R, **2027-02-13 만료** |
 | Claude Routine | “AI Automation HQ 읽기 전용 점검” `trig_017vutgzRs5qAiUeLkLtTMYu`, API 트리거, 저장소 11개(2026-11-18 JARVIS 추가), HQ 등록명 “데일리”(audit) |
@@ -186,7 +180,8 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
 - [x] GitHub `schedule` 예약 실행 시작 확인(2026-11-16 00:45·05:35·09:19 KST) — 단, 간격이 4~5시간이라 Cloudflare Cron 복구 검토 필요
 - [x] 정기 보고서 시각 12:00로 변경, 따라잡기 창 12:00~22:00(2026-11-16)
 - [x] 정기 보고서 시각 08:00로 변경, 따라잡기 창 08:00~22:00(2026-11-18)
-- [ ] 정기 보고서 08:00대 정시 발송 — 스케줄러 지연이 계속되면 Cloudflare Cron 복구
+- [x] 스케줄러를 Durable Object 알람으로 전환(2026-11-19, 버전 `62cea797`)
+- [ ] 정기 보고서 08:00 정시 발송 확인(2026-11-20 08:00 KST 첫 확인)
 - [x] 맥 환경: `npx wrangler login` 완료(관리자 비밀번호는 암호 관리자로 공유)
 - [x] 감시 프로젝트 9개 전체 동기화 완료(2026-11-16 12:39, 스케줄러 회당 전체 동기화로 개선)
 - [x] DevVibe: 저장소 커밋 감시(`[자동 갱신]`)로 연결 — 09:06 커밋 수집, 상태 ‘정상’(루틴 수정 없음)
@@ -261,3 +256,9 @@ http://localhost:5173 · 비밀번호 `demo` · 외부 API 호출 없음 · 운�
   - Claude Routine “AI Automation HQ 읽기 전용 점검”의 저장소에 JARVIS 추가(10개 → 11개). 프롬프트·읽기 전용 규칙·API 토큰·환경은 변경 없음
   - JARVIS 첫 AUDIT 완료(job 3): 비공개 저장소 clone·Actions 로그 조회·HQ 결과 회신 정상. 최근 실행 10건 성공, pytest 77개·ruff 통과. 발견 5건(medium 2·low 2·info 1): 비공개 확인 실패 시 브리핑을 건너뛰고도 실행은 성공으로 표시, 예약 실행 미검증 등
   - 위 첫 항목을 사용자 요청으로 JARVIS에서 수정·푸시(`9e882a0`): 일시 오류는 3번까지 재시도하고, 비공개가 확인되지 않아 브리핑을 건너뛰면 실행을 실패로 끝내 HQ가 감지한다. 테스트 90개·ruff·GitHub CI 통과. 나머지 발견 사항은 미조치
+
+### 2026-11-19
+- **08:00 보고서 미수신 원인**: GitHub Actions 예약 실행이 06:41 KST에 돈 뒤 09:57까지 한 번도 돌지 않아 발송 시도 자체가 없었다(`daily_reports`에 당일 행 없음). 06:41은 발송 시간대(08:00~) 전이라 건너뛰었다. 카카오·토큰·보고서 코드 문제는 아니다. 11-16~18 실제 발송도 09:19·17:11·14:10으로 계속 늦었다
+- **조치**: Cloudflare Durable Object 알람 `SchedulerAlarm` 추가. 10분 경계마다 Worker가 스스로 tick을 실행하고, 실패해도 다음 알람을 다시 건다. 계정 Cron 5개 한도와 무관하고 무료 플랜에서 동작한다. GitHub Actions 스케줄러는 백업으로 유지
+- 검증: typecheck·lint 통과, `npm test` 84개 통과(알람 테스트 5개 추가), `vite build`·`wrangler deploy --dry-run` 성공
+- 운영 배포 완료(버전 `62cea797`). 첫 알람이 10:10 KST에 실행되어 오늘 보고서 발송(`sent`, 10:10:08 KST). 08:00 정시 발송은 2026-11-20에 처음 확인 가능

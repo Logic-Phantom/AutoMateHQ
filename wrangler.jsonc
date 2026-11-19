@@ -17,9 +17,13 @@
     "run_worker_first": ["/api/*"]
   },
   // 이 계정은 무료 플랜 Cron 5개를 다른 Worker가 모두 사용 중이라 Cloudflare Cron을 등록하지 않는다.
-  // 대신 .github/workflows/scheduler.yml(10분 간격)이 POST /api/v1/scheduler/tick 을 OIDC 서명으로 호출한다.
-  // Cron 슬롯이 비면 ["*/10 * * * *"] 로 바꿔 Cloudflare Cron을 쓰면 된다(scheduled 핸들러는 그대로 있음).
+  // 대신 Durable Object 알람(SchedulerAlarm)이 10분 경계마다 스케줄러를 깨운다. Cron 한도와 무관하다.
+  // .github/workflows/scheduler.yml 은 실행이 몇 시간씩 밀려 백업으로만 유지한다.
   "triggers": { "crons": [] },
+  "durable_objects": {
+    "bindings": [{ "name": "SCHEDULER_ALARM", "class_name": "SchedulerAlarm" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SchedulerAlarm"] }],
   "vars": {
     "APP_MODE": "live",
     "APP_TIMEZONE": "Asia/Seoul",
@@ -40,6 +44,8 @@
     "demo": {
       "name": "automatehq-demo",
       "triggers": { "crons": [] },
+      // 샘플 모드는 스케줄러 알람을 쓰지 않는다.
+      "durable_objects": { "bindings": [] },
       "vars": {
         "APP_MODE": "demo",
         "APP_TIMEZONE": "Asia/Seoul",
